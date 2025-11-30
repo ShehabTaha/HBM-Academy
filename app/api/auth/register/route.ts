@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { connectDB } from "@/lib/db";
-import User from "@/models/User";
-import { hashPassword, isValidEmail } from "@/lib/auth-utils";
+import { supabase } from "@/lib/supabase";
+import { hashPassword } from "@/lib/auth-utils";
 
 // Validation schema
 const registerSchema = z.object({
@@ -14,9 +13,6 @@ const registerSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // Connect to database
-    await connectDB();
-
     // Parse request body
     const body = await req.json();
 
@@ -32,10 +28,12 @@ export async function POST(req: NextRequest) {
     const { name, email, password, role = "student" } = validation.data;
 
     // Check if user already exists
-    const existingUser = await User.findOne({
-      email: email.toLowerCase(),
-      deletedAt: null,
-    });
+    const { data: existingUser, error: checkError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email.toLowerCase())
+      .is("deletedAt", null)
+      .single();
 
     if (existingUser) {
       return NextResponse.json(
@@ -48,20 +46,32 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await hashPassword(password);
 
     // Create user
-    const user = await User.create({
-      name,
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      role,
-      isEmailVerified: false,
-    });
+    const { data: user, error: createError } = await supabase
+      .from("users")
+      .insert({
+        name,
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        role,
+        isEmailVerified: false,
+      })
+      .select()
+      .single();
+
+    if (createError || !user) {
+      console.error("Error creating user:", createError);
+      return NextResponse.json(
+        { error: "Failed to register user" },
+        { status: 500 }
+      );
+    }
 
     // Return success (exclude password)
     return NextResponse.json(
       {
         message: "User registered successfully",
         user: {
-          id: user._id,
+          id: user.id,
           name: user.name,
           email: user.email,
           role: user.role,

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { connectDB } from "@/lib/db";
-import User from "@/models/User";
+import { supabase } from "@/lib/supabase";
 import { generateTokenWithExpiry } from "@/lib/auth-utils";
 
 const forgotPasswordSchema = z.object({
@@ -10,8 +9,6 @@ const forgotPasswordSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    await connectDB();
-
     const body = await req.json();
     const validation = forgotPasswordSchema.safeParse(body);
 
@@ -25,13 +22,15 @@ export async function POST(req: NextRequest) {
     const { email } = validation.data;
 
     // Find user
-    const user = await User.findOne({
-      email: email.toLowerCase(),
-      deletedAt: null,
-    });
+    const { data: user, error: findError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email.toLowerCase())
+      .is("deletedAt", null)
+      .single();
 
     // Always return success to prevent email enumeration
-    if (!user) {
+    if (!user || findError) {
       return NextResponse.json({
         message: "If the email exists, a reset link has been sent",
       });
@@ -41,9 +40,21 @@ export async function POST(req: NextRequest) {
     const { token, expires } = generateTokenWithExpiry(1); // 1 hour expiry
 
     // Save token to user
-    user.resetPasswordToken = token;
-    user.resetPasswordExpires = expires;
-    await user.save();
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({
+        resetPasswordToken: token,
+        resetPasswordExpires: expires,
+      })
+      .eq("id", user.id);
+
+    if (updateError) {
+      console.error("Error updating user with reset token:", updateError);
+      return NextResponse.json(
+        { error: "Failed to process request" },
+        { status: 500 }
+      );
+    }
 
     // TODO: Send email with reset link
     // const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`;

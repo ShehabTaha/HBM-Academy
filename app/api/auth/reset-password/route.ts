@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { connectDB } from "@/lib/db";
-import User from "@/models/User";
+import { supabase } from "@/lib/supabase";
 import { hashPassword } from "@/lib/auth-utils";
 
 const resetPasswordSchema = z.object({
@@ -11,8 +10,6 @@ const resetPasswordSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    await connectDB();
-
     const body = await req.json();
     const validation = resetPasswordSchema.safeParse(body);
 
@@ -26,13 +23,15 @@ export async function POST(req: NextRequest) {
     const { token, password } = validation.data;
 
     // Find user with valid token
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: new Date() },
-      deletedAt: null,
-    });
+    const { data: user, error: findError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("resetPasswordToken", token)
+      .gt("resetPasswordExpires", new Date().toISOString())
+      .is("deletedAt", null)
+      .single();
 
-    if (!user) {
+    if (!user || findError) {
       return NextResponse.json(
         { error: "Invalid or expired reset token" },
         { status: 400 }
@@ -43,10 +42,22 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await hashPassword(password);
 
     // Update password and clear reset token
-    user.password = hashedPassword;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    await user.save();
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      })
+      .eq("id", user.id);
+
+    if (updateError) {
+      console.error("Error updating password:", updateError);
+      return NextResponse.json(
+        { error: "Failed to reset password" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       message: "Password reset successfully",

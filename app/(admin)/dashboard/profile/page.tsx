@@ -1,8 +1,8 @@
 import React from "react";
 import EmptyCourses from "@/components/admin/EmptyCourses";
 
-const Analytics = () => {
+const Sales = () => {
   return EmptyCourses();
 };
 
-export default Analytics;
+export default Sales;

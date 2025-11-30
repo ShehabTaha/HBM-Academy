@@ -1,10 +1,8 @@
-/* Import Google Fonts */
 @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Figtree:wght@500;600&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@600&display=swap");
 
 @import "tailwindcss";
-@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -13,6 +11,7 @@
   --color-foreground: var(--foreground);
   --color-app-bg: var(--app-bg);
   --color-primary-blue: var(--primary-blue);
+  --color-primary-blue-hover: var(--primary-hover);
   --color-primary-blue-foreground: var(--primary-blue-foreground);
   --color-accent-yellow: var(--accent-yellow);
   --color-text-muted: var(--text-muted);
@@ -73,7 +72,8 @@
   --card-foreground: #000000;
   --popover: #ffffff;
   --popover-foreground: #000000;
-  --primary: #4862f5;
+  --primary: #4761f5;
+  --primary-hover: #344cd3;
   --primary-foreground: #ffffff;
   --secondary: #f6f8fb;
   --secondary-foreground: #000000;
@@ -255,4 +255,9 @@
   p {
     @apply text-xl font-semibold max-sm:hidden;
   }
+}
+
+/* In sidebar.tsx or sidebar.css - REMOVE or CHANGE this */
+[data-sidebar-content] {
+  height: 400px; /* Remove this or increase it */
 }

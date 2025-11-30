@@ -24,7 +24,7 @@ const SidebarItem = ({
   href: string;
   ref?: React.Ref<HTMLAnchorElement>;
   onMouseEnter: () => void;
-  onMouseLeave: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onMouseLeave: (event: React.MouseEvent<HTMLAnchorElement>) => void;
   onFocus: () => void;
   onBlur: () => void;
 }) => {

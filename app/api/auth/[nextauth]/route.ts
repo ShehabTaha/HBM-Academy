@@ -2,8 +2,7 @@ import NextAuth, { type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { z } from "zod";
-import { connectDB } from "@/lib/db";
-import User from "@/models/User";
+import { supabase } from "@/lib/supabase";
 import bcrypt from "bcryptjs";
 
 // Validation schema for credentials
@@ -17,14 +16,15 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email", placeholder: "you@example.com" },
+        email: {
+          label: "Email",
+          type: "email",
+          placeholder: "you@example.com",
+        },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         try {
-          // Connect to database
-          await connectDB();
-
           // Validate the inputs
           const validation = credentialsSchema.safeParse(credentials);
           if (!validation.success) {
@@ -34,14 +34,16 @@ export const authOptions: NextAuthOptions = {
 
           const { email, password } = validation.data;
 
-          // Fetch user from DB (excluding soft-deleted users)
-          const user = await User.findOne({ 
-            email: email.toLowerCase(),
-            deletedAt: null 
-          }).select("+password");
+          // Fetch user from Supabase
+          const { data: user, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq("email", email.toLowerCase())
+            .is("deletedAt", null)
+            .single();
 
-          if (!user) {
-            console.error("User not found:", email);
+          if (error || !user) {
+            console.error("User not found or error:", email, error);
             return null;
           }
 
@@ -60,7 +62,7 @@ export const authOptions: NextAuthOptions = {
 
           // Return user object (password excluded)
           return {
-            id: user._id.toString(),
+            id: user.id.toString(), // Supabase ID is typically UUID or int, ensure string
             email: user.email,
             name: user.name,
             role: user.role,
@@ -99,29 +101,41 @@ export const authOptions: NextAuthOptions = {
       // Handle OAuth sign-in
       if (account?.provider === "google") {
         try {
-          await connectDB();
-
           // Check if user exists
-          let existingUser = await User.findOne({ 
-            email: user.email?.toLowerCase(),
-            deletedAt: null 
-          });
+          const { data: existingUser, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq("email", user.email?.toLowerCase())
+            .is("deletedAt", null)
+            .single();
 
           if (!existingUser) {
             // Create new user from OAuth
-            existingUser = await User.create({
-              name: user.name,
-              email: user.email?.toLowerCase(),
-              avatar: user.image,
-              role: "student",
-              isEmailVerified: true,
-              password: await bcrypt.hash(Math.random().toString(36), 10), // Random password
-            });
-          }
+            const { data: newUser, error: createError } = await supabase
+              .from("users")
+              .insert({
+                name: user.name,
+                email: user.email?.toLowerCase(),
+                avatar: user.image,
+                role: "student",
+                isEmailVerified: true,
+                password: await bcrypt.hash(Math.random().toString(36), 10), // Random password
+              })
+              .select()
+              .single();
 
-          // Update user ID
-          user.id = existingUser._id.toString();
-          user.role = existingUser.role;
+            if (createError) {
+              console.error("Error creating user from OAuth:", createError);
+              return false;
+            }
+            // Update user ID for session
+            user.id = newUser.id.toString();
+            user.role = newUser.role;
+          } else {
+            // Update user ID for session
+            user.id = existingUser.id.toString();
+            user.role = existingUser.role;
+          }
 
           return true;
         } catch (error) {
