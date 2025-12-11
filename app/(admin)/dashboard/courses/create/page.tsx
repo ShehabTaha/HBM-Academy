@@ -21,16 +21,11 @@ import {
   File,
 } from "lucide-react";
 import LessonForm, { LessonData } from "@/components/admin/LessonForm";
-
-interface Chapter {
-  id: string;
-  title: string;
-  lessons: LessonData[];
-  isOpen?: boolean;
-}
+import { useCourse } from "@/contexts/CourseContext";
 
 export default function CreateCoursePage() {
-  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const { chapters, setChapters, toggleChapter, updateLesson } = useCourse();
+
   const [isAddingChapter, setIsAddingChapter] = useState(false);
   const [newChapterTitle, setNewChapterTitle] = useState("");
 
@@ -41,13 +36,18 @@ export default function CreateCoursePage() {
 
   const handleAddChapter = () => {
     if (!newChapterTitle.trim()) return;
-    const newChapter: Chapter = {
-      id: Date.now().toString(),
-      title: newChapterTitle,
-      lessons: [],
-      isOpen: true,
-    };
-    setChapters([...chapters, newChapter]);
+
+    // Create chapter directly with the custom title
+    setChapters((prevChapters) => [
+      ...prevChapters,
+      {
+        id: `chapter-${Date.now()}`,
+        title: newChapterTitle,
+        lessons: [],
+        isOpen: true,
+      },
+    ]);
+
     setNewChapterTitle("");
     setIsAddingChapter(false);
   };
@@ -55,12 +55,6 @@ export default function CreateCoursePage() {
   const handleCancelAddChapter = () => {
     setNewChapterTitle("");
     setIsAddingChapter(false);
-  };
-
-  const toggleChapter = (id: string) => {
-    setChapters(
-      chapters.map((ch) => (ch.id === id ? { ...ch, isOpen: !ch.isOpen } : ch))
-    );
   };
 
   const handleAddLessonStart = (chapterId: string) => {
@@ -72,28 +66,29 @@ export default function CreateCoursePage() {
   const handleSaveLesson = (lessonData: LessonData) => {
     if (!activeChapterId) return;
 
-    setChapters(
-      chapters.map((ch) => {
-        if (ch.id === activeChapterId) {
-          if (editingLessonId) {
-            // Update existing lesson
-            return {
-              ...ch,
-              lessons: ch.lessons.map((l) =>
-                l.id === editingLessonId ? lessonData : l
-              ),
+    if (editingLessonId) {
+      // Update existing lesson
+      updateLesson(activeChapterId, editingLessonId, lessonData as any);
+    } else {
+      // Add new lesson using setChapters
+      setChapters((prevChapters) =>
+        prevChapters.map((ch) => {
+          if (ch.id === activeChapterId) {
+            const newLesson = {
+              id: `lesson-${Date.now()}`,
+              title: lessonData.title,
+              type: lessonData.type as "video" | "text" | "pdf" | "audio",
+              videoUrl: lessonData.videoUrl || "",
+              description: lessonData.description || "",
+              settings: lessonData.settings,
             };
-          } else {
-            // Add new lesson
-            return {
-              ...ch,
-              lessons: [...ch.lessons, lessonData],
-            };
+            return { ...ch, lessons: [...ch.lessons, newLesson] };
           }
-        }
-        return ch;
-      })
-    );
+          return ch;
+        })
+      );
+    }
+
     setIsAddingLesson(false);
     setEditingLessonId(null);
     setActiveChapterId(null);

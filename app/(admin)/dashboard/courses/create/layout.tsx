@@ -1,14 +1,10 @@
 "use client";
 import React from "react";
-import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-} from "@/components/ui/navigation-menu";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { CourseProvider } from "@/contexts/CourseContext";
 
 const navitems = [
   {
@@ -51,36 +47,39 @@ const Navigation = () => {
       <div className="mb-4">
         <h2 className="text-2xl font-normal">New Course</h2>
       </div>
-      <NavigationMenu className="w-full">
-        <NavigationMenuList className="gap-3 flex-wrap">
-          {navitems.map((item) => (
-            <NavigationMenuItem key={item.title}>
-              <NavigationMenuLink asChild>
-                <Link
-                  href={item.href}
-                  className={`px-4 py-2 rounded-md transition-colors  ${
-                    pathname === item.href
-                      ? "bg-main-primary-blue text-primary-blue"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  {item.title}
-                </Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
-          ))}
-        </NavigationMenuList>
-      </NavigationMenu>
-      <hr className=" border-t border-gray-300 w-full" />
+      <div className="w-full flex flex-wrap gap-3">
+        {navitems.map((item) => {
+          // Check if current path matches this nav item
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/dashboard/courses/create" &&
+              pathname?.startsWith(item.href));
+
+          return (
+            <Link
+              key={item.title}
+              href={item.href}
+              className={`px-4 py-2 rounded-md transition-colors text-sm font-medium ${
+                isActive
+                  ? "bg-main-white text-primary-blue"
+                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+              }`}
+            >
+              {item.title}
+            </Link>
+          );
+        })}
+      </div>
+      <hr className=" border-t border-gray-400 w-full" />
     </div>
   );
 };
 const layout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <>
+    <CourseProvider>
       <Navigation />
       <div className="w-full h-full">{children}</div>
-    </>
+    </CourseProvider>
   );
 };
 

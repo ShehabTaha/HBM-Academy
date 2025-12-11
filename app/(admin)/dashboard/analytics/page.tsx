@@ -2,7 +2,7 @@ import React from "react";
 import EmptyCourses from "@/components/admin/EmptyCourses";
 
 const Analytics = () => {
-  return EmptyCourses();
+  return <div>Analytics</div>;
 };
 
 export default Analytics;

@@ -1,7 +1,7 @@
 import React from "react";
 
-const Channels = () => {
-  return <div>channels</div>;
+const Settings = () => {
+  return <div>Settings</div>;
 };
 
-export default Channels;
+export default Settings;

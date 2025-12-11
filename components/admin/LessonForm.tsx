@@ -115,6 +115,13 @@ export default function LessonForm({
   // Quiz/Survey State
   const [questions, setQuestions] = useState<Question[]>([]);
 
+  // Validation State
+  const [errors, setErrors] = useState<{
+    title?: string;
+    content?: string;
+    questions?: string;
+  }>({});
+
   // Initialize questions if editing a quiz/survey
   useEffect(() => {
     if ((type === "quiz" || type === "survey") && initialData?.content) {
@@ -153,7 +160,81 @@ export default function LessonForm({
   }, [videoPreviewUrl, audioPreviewUrl]);
 
   const handleSave = () => {
-    if (!title.trim()) return;
+    // Reset errors
+    const newErrors: {
+      title?: string;
+      content?: string;
+      questions?: string;
+    } = {};
+
+    // Validate title
+    if (!title.trim()) {
+      newErrors.title = "Lesson title is required";
+    }
+
+    // Validate content based on lesson type
+    if (type === "video") {
+      if (!content.trim() && !selectedFileName) {
+        newErrors.content = "Please search for a video or upload a video file";
+      }
+    } else if (type === "text" || type === "assignment") {
+      if (!content.trim()) {
+        newErrors.content =
+          type === "assignment"
+            ? "Assignment instructions are required"
+            : "Content is required";
+      }
+    } else if (type === "pdf" || type === "download" || type === "audio") {
+      if (!selectedFileName) {
+        newErrors.content = `Please upload a ${
+          type === "pdf" ? "PDF" : type === "audio" ? "audio" : ""
+        } file`;
+      }
+    } else if (type === "quiz" || type === "survey") {
+      // Validate questions
+      if (questions.length === 0) {
+        newErrors.questions = `Please add at least one question to your ${type}`;
+      } else {
+        // Validate each question
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          if (!q.text.trim()) {
+            newErrors.questions = `Question ${i + 1} text is required`;
+            break;
+          }
+          if (q.options.length < 2) {
+            newErrors.questions = `Question ${
+              i + 1
+            } must have at least 2 options`;
+            break;
+          }
+          // Check if all options have text
+          const emptyOption = q.options.findIndex((opt) => !opt.text.trim());
+          if (emptyOption !== -1) {
+            newErrors.questions = `Question ${i + 1}, Option ${
+              emptyOption + 1
+            } text is required`;
+            break;
+          }
+          // For quizzes, validate that a correct answer is selected
+          if (type === "quiz" && !q.correctOptionId) {
+            newErrors.questions = `Question ${
+              i + 1
+            } must have a correct answer selected`;
+            break;
+          }
+        }
+      }
+    }
+
+    // If there are errors, set them and return
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    // Clear errors and proceed with save
+    setErrors({});
 
     let finalContent = content;
     if (type === "quiz" || type === "survey") {
@@ -180,6 +261,11 @@ export default function LessonForm({
     if (file) {
       setSelectedFileName(file.name);
       setContent(file.name);
+
+      // Clear content error when file is selected
+      if (errors.content) {
+        setErrors({ ...errors, content: undefined });
+      }
 
       if (type === "video") {
         const url = URL.createObjectURL(file);
@@ -216,6 +302,10 @@ export default function LessonForm({
       ...questions,
       { id: Date.now().toString(), text: "", options: [] },
     ]);
+    // Clear questions error when adding a question
+    if (errors.questions) {
+      setErrors({ ...errors, questions: undefined });
+    }
   };
 
   const updateQuestion = (id: string, text: string) => {
@@ -305,7 +395,12 @@ export default function LessonForm({
         className="w-full p-4 min-h-[300px] outline-none resize-y text-sm"
         placeholder="Enter content here..."
         value={content}
-        onChange={(e) => setContent(e.target.value)}
+        onChange={(e) => {
+          setContent(e.target.value);
+          if (errors.content) {
+            setErrors({ ...errors, content: undefined });
+          }
+        }}
       />
     </div>
   );
@@ -325,9 +420,19 @@ export default function LessonForm({
           <Input
             placeholder="Enter a lesson title"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full"
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (errors.title) {
+                setErrors({ ...errors, title: undefined });
+              }
+            }}
+            className={`w-full ${
+              errors.title ? "border-red-500 focus:ring-red-500" : ""
+            }`}
           />
+          {errors.title && (
+            <p className="text-red-500 text-sm mt-1">{errors.title}</p>
+          )}
         </div>
 
         {/* Lesson Type Grid */}
@@ -344,6 +449,7 @@ export default function LessonForm({
                   setContent("");
                   setSelectedFileName("");
                   setQuestions([]);
+                  setErrors({});
                 }}
                 className={`flex items-center gap-3 p-3 rounded-lg border text-sm font-medium transition-colors ${
                   type === item.type
@@ -374,7 +480,12 @@ export default function LessonForm({
               <Input
                 placeholder="Search for a video..."
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={(e) => {
+                  setContent(e.target.value);
+                  if (errors.content) {
+                    setErrors({ ...errors, content: undefined });
+                  }
+                }}
               />
             </div>
 
@@ -463,6 +574,9 @@ export default function LessonForm({
                 .
               </p>
             </div>
+            {errors.content && (
+              <p className="text-red-500 text-sm mt-2">{errors.content}</p>
+            )}
           </div>
         )}
 
@@ -472,6 +586,9 @@ export default function LessonForm({
               {type === "assignment" ? "Assignment Instructions" : "Content"}
             </label>
             {renderRichTextEditor()}
+            {errors.content && (
+              <p className="text-red-500 text-sm mt-2">{errors.content}</p>
+            )}
           </div>
         )}
 
@@ -498,6 +615,9 @@ export default function LessonForm({
                 Browse files
               </Button>
             </div>
+            {errors.content && (
+              <p className="text-red-500 text-sm mt-2">{errors.content}</p>
+            )}
           </div>
         )}
 
@@ -550,6 +670,9 @@ export default function LessonForm({
                   </audio>
                 )}
               </div>
+            )}
+            {errors.content && (
+              <p className="text-red-500 text-sm mt-2">{errors.content}</p>
             )}
           </div>
         )}
@@ -648,6 +771,9 @@ export default function LessonForm({
                   </div>
                 ))}
               </div>
+            )}
+            {errors.questions && (
+              <p className="text-red-500 text-sm mt-2">{errors.questions}</p>
             )}
           </div>
         )}
