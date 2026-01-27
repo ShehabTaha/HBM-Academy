@@ -7,17 +7,13 @@ import {
   Bold,
   Italic,
   Underline,
-  Strikethrough,
   List,
   ListOrdered,
-  Link as LinkIcon,
-  Image as ImageIcon,
   Video,
   FileText,
   Type,
   Mic,
   FileQuestion,
-  Download,
   ClipboardList,
   FileSpreadsheet,
   Plus,
@@ -26,7 +22,11 @@ import {
   Circle,
   CheckCircle2,
   X,
+  Library,
 } from "lucide-react";
+import VideoSelectionModal from "@/components/dashboard/courses/modals/VideoSelectionModal";
+import type { Video as LibraryVideo } from "@/types/video-library";
+import Image from "next/image";
 
 export type LessonType =
   | "video"
@@ -34,7 +34,6 @@ export type LessonType =
   | "pdf"
   | "audio"
   | "quiz"
-  | "download"
   | "survey"
   | "assignment";
 
@@ -43,6 +42,10 @@ export interface LessonData {
   title: string;
   type: LessonType;
   content: string; // URL for video/pdf, HTML/Markdown for text, JSON for quiz/survey
+  description?: string; // Optional description for all lesson types
+  duration?: number;
+  thumbnail?: string;
+  downloadableFile?: string; // Optional downloadable file for all lesson types
   settings: {
     isFreePreview: boolean;
     isPrerequisite: boolean;
@@ -79,7 +82,6 @@ const lessonTypes: {
   { type: "pdf", label: "PDF", icon: <FileText size={20} /> },
   { type: "audio", label: "Audio", icon: <Mic size={20} /> },
   { type: "quiz", label: "Quiz", icon: <FileQuestion size={20} /> },
-  { type: "download", label: "Download", icon: <Download size={20} /> },
   { type: "survey", label: "Survey", icon: <ClipboardList size={20} /> },
   {
     type: "assignment",
@@ -96,21 +98,111 @@ export default function LessonForm({
   const [title, setTitle] = useState(initialData?.title || "");
   const [type, setType] = useState<LessonType>(initialData?.type || "video");
   const [content, setContent] = useState(initialData?.content || "");
+  const [description, setDescription] = useState(
+    initialData?.description || "",
+  );
   const [settings, setSettings] = useState(
     initialData?.settings || {
       isFreePreview: false,
       isPrerequisite: false,
       enableDiscussions: false,
       isDownloadable: false,
-    }
+    },
   );
 
+  // --- Persistence Logic ---
+  const draftKey = `hbm_lesson_draft_${initialData?.id || "new"}`;
+
+  useEffect(() => {
+    const saved = localStorage.getItem(draftKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.title) setTitle(parsed.title);
+        if (parsed.type) setType(parsed.type);
+        if (parsed.content) setContent(parsed.content);
+        if (parsed.description) setDescription(parsed.description);
+        if (parsed.settings) setSettings(parsed.settings);
+      } catch (e) {
+        console.error("Failed to load lesson draft", e);
+      }
+    }
+  }, [draftKey]);
+
+  useEffect(() => {
+    const draftData = { title, type, content, description, settings };
+    // Only save if it's actually changed from initialData
+    const isDifferent =
+      JSON.stringify(draftData) !==
+      JSON.stringify({
+        title: initialData?.title || "",
+        type: initialData?.type || "video",
+        content: initialData?.content || "",
+        description: initialData?.description || "",
+        settings: initialData?.settings || {
+          isFreePreview: false,
+          isPrerequisite: false,
+          enableDiscussions: false,
+          isDownloadable: false,
+        },
+      });
+
+    if (isDifferent) {
+      localStorage.setItem(draftKey, JSON.stringify(draftData));
+    } else {
+      localStorage.removeItem(draftKey);
+    }
+  }, [title, type, content, description, settings, draftKey, initialData]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFileName, setSelectedFileName] = useState("");
+  const downloadableFileInputRef = useRef<HTMLInputElement>(null);
+
+  const [selectedFileName, setSelectedFileName] = useState(
+    ["video", "audio", "pdf"].includes(initialData?.type || "") &&
+      initialData?.content
+      ? initialData.content
+      : "",
+  );
+
+  const [selectedDownloadableFileName, setSelectedDownloadableFileName] =
+    useState(initialData?.downloadableFile || "");
+
   const [isEncoding, setIsEncoding] = useState(false);
   const [encodingProgress, setEncodingProgress] = useState(0);
-  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
-  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
+
+  // For video preview - handle both new uploads (blob URLs) and existing videos (storage URLs)
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(() => {
+    if (initialData?.type === "video" && initialData?.content) {
+      // Check if it's a valid URL (from storage) or just a filename
+      if (
+        initialData.content.startsWith("http") ||
+        initialData.content.startsWith("blob:")
+      ) {
+        return initialData.content;
+      }
+      // If it's just a filename, we can't preview it without uploading to storage first
+      // In a real implementation, you'd fetch it from Supabase Storage here
+      return null;
+    }
+    return null;
+  });
+
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(() => {
+    if (initialData?.type === "audio" && initialData?.content) {
+      if (
+        initialData.content.startsWith("http") ||
+        initialData.content.startsWith("blob:")
+      ) {
+        return initialData.content;
+      }
+      return null;
+    }
+    return null;
+  });
+
+  const [libraryModalOpen, setLibraryModalOpen] = useState(false);
+  const [thumbnail, setThumbnail] = useState(initialData?.thumbnail || "");
+  const [duration, setDuration] = useState(initialData?.duration || 0);
 
   // Quiz/Survey State
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -159,7 +251,7 @@ export default function LessonForm({
     };
   }, [videoPreviewUrl, audioPreviewUrl]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Reset errors
     const newErrors: {
       title?: string;
@@ -184,10 +276,10 @@ export default function LessonForm({
             ? "Assignment instructions are required"
             : "Content is required";
       }
-    } else if (type === "pdf" || type === "download" || type === "audio") {
-      if (!selectedFileName) {
+    } else if (type === "pdf" || type === "audio") {
+      if (!selectedFileName && !initialData?.content) {
         newErrors.content = `Please upload a ${
-          type === "pdf" ? "PDF" : type === "audio" ? "audio" : ""
+          type === "pdf" ? "PDF" : "audio"
         } file`;
       }
     } else if (type === "quiz" || type === "survey") {
@@ -236,20 +328,105 @@ export default function LessonForm({
     // Clear errors and proceed with save
     setErrors({});
 
+    // Import upload functions dynamically
+    const { uploadVideo, uploadAudio, uploadCourseMaterial } =
+      await import("@/lib/services/storage.service");
+
     let finalContent = content;
+    let finalDownloadableFile = selectedDownloadableFileName;
+    const lessonId = initialData?.id || Date.now().toString();
+
+    try {
+      setIsEncoding(true);
+      setEncodingProgress(10); // Start progress
+
+      // Handle Main Content File Upload
+      if (fileInputRef.current?.files?.[0]) {
+        const file = fileInputRef.current.files[0];
+
+        let result;
+        if (type === "video") {
+          result = await uploadVideo(lessonId, file, (progress) =>
+            setEncodingProgress(progress),
+          );
+        } else if (type === "audio") {
+          result = await uploadAudio(lessonId, file);
+        } else if (type === "pdf") {
+          result = await uploadCourseMaterial(lessonId, file);
+        }
+
+        if (result && result.success && result.url) {
+          finalContent = result.url;
+        } else {
+          setErrors({ ...errors, content: result?.error || "Upload failed" });
+          setIsEncoding(false);
+          return;
+        }
+      }
+
+      // Handle Downloadable File Upload
+      if (downloadableFileInputRef.current?.files?.[0]) {
+        const file = downloadableFileInputRef.current.files[0];
+        // Use generic material upload for attachments
+        const result = await uploadCourseMaterial(lessonId, file);
+
+        if (result && result.success && result.url) {
+          finalDownloadableFile = result.url;
+        } else {
+          // Non-blocking error for optional file, but good to log
+          console.error("Downloadable file upload failed", result?.error);
+        }
+      }
+
+      setEncodingProgress(100);
+      setEncodingProgress(100);
+    } catch (e) {
+      console.error("Upload error details:", e);
+
+      // If bucket is missing or other storage error, we should still allow saving the lesson
+      // potentially without the file URL or just fail gracefully
+      const errorMessage = e instanceof Error ? e.message : "Unknown error";
+
+      if (
+        errorMessage.includes("Bucket not found") ||
+        errorMessage.includes("storage")
+      ) {
+        alert(
+          "Warning: Storage buckets are missing. File cannot be uploaded. Using placeholder data.",
+        );
+        // Fallback: Use filename as content if upload fails, or empty?
+        // We'll leave finalContent as is, but maybe set error?
+        // Actually, let's just proceed so user isn't stuck.
+      } else {
+        setErrors({
+          ...errors,
+          content: "File upload failed: " + errorMessage,
+        });
+        setIsEncoding(false);
+        return;
+      }
+    }
+
     if (type === "quiz" || type === "survey") {
       finalContent = JSON.stringify(questions);
-    } else if (selectedFileName) {
-      finalContent = selectedFileName;
     }
 
     onSave({
-      id: initialData?.id || Date.now().toString(),
+      id: lessonId,
       title,
       type,
       content: finalContent,
+      description: description.trim() || undefined,
+      duration,
+      thumbnail: thumbnail || undefined,
+      downloadableFile: finalDownloadableFile || undefined,
       settings,
     });
+
+    // Clear draft after successful save
+    localStorage.removeItem(draftKey);
+
+    setIsEncoding(false);
   };
 
   const handleBrowseClick = () => {
@@ -260,21 +437,23 @@ export default function LessonForm({
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFileName(file.name);
-      setContent(file.name);
+
+      // Temporarily set preview URLs for immediate feedback
+      if (type === "video") {
+        const url = URL.createObjectURL(file);
+        setVideoPreviewUrl(url);
+        setIsEncoding(false); // Can't properly mock encoding with real upload pending
+      } else if (type === "audio") {
+        const url = URL.createObjectURL(file);
+        setAudioPreviewUrl(url);
+      } else if (type === "pdf") {
+        // Just show name
+        setContent(file.name);
+      }
 
       // Clear content error when file is selected
       if (errors.content) {
         setErrors({ ...errors, content: undefined });
-      }
-
-      if (type === "video") {
-        const url = URL.createObjectURL(file);
-        setVideoPreviewUrl(url);
-        setIsEncoding(true);
-        setEncodingProgress(0);
-      } else if (type === "audio") {
-        const url = URL.createObjectURL(file);
-        setAudioPreviewUrl(url);
       }
     }
   };
@@ -326,7 +505,7 @@ export default function LessonForm({
           };
         }
         return q;
-      })
+      }),
     );
   };
 
@@ -337,12 +516,12 @@ export default function LessonForm({
           return {
             ...q,
             options: q.options.map((opt) =>
-              opt.id === optionId ? { ...opt, text } : opt
+              opt.id === optionId ? { ...opt, text } : opt,
             ),
           };
         }
         return q;
-      })
+      }),
     );
   };
 
@@ -356,7 +535,7 @@ export default function LessonForm({
           };
         }
         return q;
-      })
+      }),
     );
   };
 
@@ -367,7 +546,7 @@ export default function LessonForm({
           return { ...q, correctOptionId: optionId };
         }
         return q;
-      })
+      }),
     );
   };
 
@@ -475,19 +654,73 @@ export default function LessonForm({
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Video from your library
+                Video Content
               </label>
-              <Input
-                placeholder="Search for a video..."
-                value={content}
-                onChange={(e) => {
-                  setContent(e.target.value);
-                  if (errors.content) {
-                    setErrors({ ...errors, content: undefined });
-                  }
-                }}
-              />
+
+              {content && content.startsWith("http") ? (
+                <div className="flex items-center gap-4 p-4 border rounded-lg bg-blue-50/30 border-blue-100">
+                  <div className="relative w-32 aspect-video bg-muted rounded overflow-hidden shadow-sm">
+                    {thumbnail ? (
+                      <Image
+                        src={thumbnail}
+                        alt="Thumbnail"
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <Video className="text-blue-300" size={24} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-blue-900 truncate">
+                      {title || "Selected Video"}
+                    </p>
+                    <p className="text-xs text-blue-600 truncate opacity-70">
+                      External Video source
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-blue-600 hover:text-blue-800 shrink-0"
+                    onClick={() => setLibraryModalOpen(true)}
+                  >
+                    Change
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 px-4 border-2 border-dashed rounded-xl bg-gray-50/50 hover:bg-gray-50 transition-colors group">
+                  <Library className="h-10 w-10 text-gray-300 mb-2 group-hover:text-blue-400 transition-colors" />
+                  <p className="text-sm text-gray-500 mb-4">
+                    No video selected from library
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="bg-white"
+                    onClick={() => setLibraryModalOpen(true)}
+                  >
+                    <Library className="h-4 w-4 mr-2" />
+                    Select from Video Library
+                  </Button>
+                </div>
+              )}
             </div>
+
+            <VideoSelectionModal
+              open={libraryModalOpen}
+              onOpenChange={setLibraryModalOpen}
+              onSelect={(video) => {
+                setLibraryModalOpen(false);
+                setTitle(video.title);
+                if (video.description) setDescription(video.description);
+                setContent(video.file_url);
+                setThumbnail(video.thumbnail_url || "");
+                setDuration(video.duration);
+              }}
+            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -548,6 +781,9 @@ export default function LessonForm({
                           src={videoPreviewUrl}
                           className="w-full h-full object-contain"
                           controls
+                          controlsList="nodownload"
+                          disablePictureInPicture
+                          onContextMenu={(e) => e.preventDefault()}
                         />
                       ) : (
                         <div className="text-white text-center">
@@ -592,10 +828,10 @@ export default function LessonForm({
           </div>
         )}
 
-        {(type === "pdf" || type === "download") && (
+        {type === "pdf" && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Upload {type === "pdf" ? "PDF" : "File"}
+              Upload PDF
             </label>
             <div className="flex gap-2">
               <div className="flex-1 border rounded-md px-3 py-2 text-sm text-gray-500 bg-gray-50 truncate">
@@ -605,7 +841,7 @@ export default function LessonForm({
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
-                accept={type === "pdf" ? "application/pdf" : "*/*"}
+                accept="application/pdf"
                 onChange={handleFileChange}
               />
               <Button
@@ -695,7 +931,7 @@ export default function LessonForm({
 
             {questions.length === 0 ? (
               <div className="text-center py-8 border-2 border-dashed rounded-lg text-gray-500">
-                No questions added yet. Click "Add Question" to start.
+                No questions added yet. Click &quot;Add Question&quot; to start.
               </div>
             ) : (
               <div className="space-y-6">
@@ -729,7 +965,7 @@ export default function LessonForm({
                         <div key={opt.id} className="flex items-center gap-2">
                           <button
                             onClick={() => setCorrectOption(q.id, opt.id)}
-                            className={`flex-shrink-0 ${
+                            className={`shrink-0 ${
                               q.correctOptionId === opt.id
                                 ? "text-green-600"
                                 : "text-gray-300 hover:text-gray-400"
@@ -777,6 +1013,81 @@ export default function LessonForm({
             )}
           </div>
         )}
+
+        {/* Description - appears for all lesson types */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Description (Optional)
+          </label>
+          <textarea
+            className="w-full p-3 border rounded-md text-sm outline-none resize-y min-h-[100px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Add a description for this lesson..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Provide additional context or information about this lesson
+          </p>
+        </div>
+
+        {/* Downloadable File - appears for all lesson types */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Downloadable File (Optional)
+          </label>
+          {!selectedDownloadableFileName ? (
+            <div className="flex gap-2">
+              <div className="flex-1 border rounded-md px-3 py-2 text-sm text-gray-500 bg-gray-50 truncate">
+                No file selected
+              </div>
+              <input
+                type="file"
+                ref={downloadableFileInputRef}
+                className="hidden"
+                accept="*/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setSelectedDownloadableFileName(file.name);
+                  }
+                }}
+              />
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => downloadableFileInputRef.current?.click()}
+              >
+                Browse files
+              </Button>
+            </div>
+          ) : (
+            <div className="border rounded-lg p-3 bg-gray-50 flex items-center justify-between">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <FileText className="text-blue-600 shrink-0" size={20} />
+                <span className="text-sm font-medium text-gray-900 truncate">
+                  {selectedDownloadableFileName}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedDownloadableFileName("");
+
+                  if (downloadableFileInputRef.current) {
+                    downloadableFileInputRef.current.value = "";
+                  }
+                }}
+                className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 px-2 ml-2"
+              >
+                Remove
+              </Button>
+            </div>
+          )}
+          <p className="text-xs text-gray-500 mt-1">
+            Upload a file that students can download (e.g., PDF, document,
+            resource file)
+          </p>
+        </div>
 
         {/* Settings */}
         <div className="space-y-4 pt-6 border-t">

@@ -14,7 +14,7 @@ export async function hashPassword(password: string): Promise<string> {
  */
 export async function comparePassword(
   password: string,
-  hash: string
+  hash: string,
 ): Promise<boolean> {
   return bcrypt.compare(password, hash);
 }
@@ -58,25 +58,14 @@ export function isStrongPassword(password: string): {
 } {
   const errors: string[] = [];
 
-  if (password.length < 8) {
-    errors.push("Password must be at least 8 characters long");
+  if (password.length < 6) {
+    errors.push("Password must be at least 6 characters long");
   }
 
-  if (!/[A-Z]/.test(password)) {
-    errors.push("Password must contain at least one uppercase letter");
-  }
-
-  if (!/[a-z]/.test(password)) {
-    errors.push("Password must contain at least one lowercase letter");
-  }
-
-  if (!/[0-9]/.test(password)) {
-    errors.push("Password must contain at least one number");
-  }
-
-  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-    errors.push("Password must contain at least one special character");
-  }
+  // Relaxed rules: Just need valid length for now to unblock user
+  // if (!/[A-Z]/.test(password)) {
+  //   errors.push("Password must contain at least one uppercase letter");
+  // }
 
   return {
     isValid: errors.length === 0,
@@ -125,4 +114,111 @@ export function sanitizeInput(input: string): string {
  */
 export function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+/**
+ * Check if a user is rate limited based on IP or Email
+ * Limit: 5 failed attempts per 15 minutes
+ */
+import { createClient } from "@supabase/supabase-js";
+
+// Helper for server-side supabase client
+const createServerClient = () =>
+  createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false } },
+  );
+
+export async function checkRateLimit(
+  email: string,
+  ipAddress?: string,
+): Promise<{ isBlocked: boolean; message?: string }> {
+  try {
+    const windowMinutes = 15;
+    const maxAttempts = 5;
+    const timeWindow = new Date();
+    timeWindow.setMinutes(timeWindow.getMinutes() - windowMinutes);
+
+    const supabase = createServerClient();
+
+    // Check failed attempts for this email
+    const { count: emailCount, error: emailError } = await supabase
+      .from("login_attempts")
+      .select("*", { count: "exact", head: true })
+      .eq("email", email.toLowerCase())
+      .eq("success", false)
+      .gt("created_at", timeWindow.toISOString());
+
+    if (emailError) {
+      console.error("Rate limit check error (email):", emailError);
+      return { isBlocked: false };
+    }
+
+    if ((emailCount || 0) >= maxAttempts) {
+      return {
+        isBlocked: true,
+        message:
+          "Too many failed login attempts. Please try again in 15 minutes.",
+      };
+    }
+
+    // Check failed attempts for this IP (if provided)
+    if (ipAddress) {
+      const { count: ipCount, error: ipError } = await supabase
+        .from("login_attempts")
+        .select("*", { count: "exact", head: true })
+        .eq("ip_address", ipAddress)
+        .eq("success", false)
+        .gt("created_at", timeWindow.toISOString());
+
+      if (ipError) {
+        console.error("Rate limit check error (IP):", ipError);
+        return { isBlocked: false };
+      }
+
+      if ((ipCount || 0) >= maxAttempts * 2) {
+        // Higher limit for IP (shared networks)
+        return {
+          isBlocked: true,
+          message:
+            "Too many failed login attempts from this network. Please try again later.",
+        };
+      }
+    }
+  } catch (err) {
+    console.error("Rate limit unexpected crash:", err);
+    // Fail OPEN: Allow login if rate limiting crashes
+    return { isBlocked: false };
+  }
+
+  return { isBlocked: false };
+}
+
+/**
+ * Record a login attempt
+ */
+export async function recordLoginAttempt(
+  email: string,
+  success: boolean,
+  ipAddress?: string,
+  userAgent?: string,
+  failureReason?: string,
+): Promise<void> {
+  try {
+    const supabase = createServerClient();
+    const { error } = await supabase.from("login_attempts").insert({
+      email: email.toLowerCase(),
+      ip_address: ipAddress || null,
+      user_agent: userAgent || null,
+      success,
+      failure_reason: failureReason || null,
+    });
+
+    if (error) {
+      console.error("Error recording login attempt:", error);
+    }
+  } catch (err) {
+    console.error("Failed to log login attempt:", err);
+  }
 }

@@ -7,6 +7,7 @@ import {
   Layout,
   FileText,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface SidebarProps {
   courseTitle: string;

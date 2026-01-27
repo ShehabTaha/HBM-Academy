@@ -21,15 +21,16 @@ export async function POST(req: NextRequest) {
     if (!validation.success) {
       return NextResponse.json(
         { error: "Validation failed", details: validation.error.issues },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const { name, email, password, role = "student" } = validation.data;
 
     // Check if user already exists
-    const { data: existingUser, error: checkError } = await supabase
-      .from("users")
+    const { data: existingUser, error: checkError } = await (
+      supabase.from("users") as any
+    )
       .select("*")
       .eq("email", email.toLowerCase())
       .is("deletedAt", null)
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     if (existingUser) {
       return NextResponse.json(
         { error: "User with this email already exists" },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -46,8 +47,9 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await hashPassword(password);
 
     // Create user
-    const { data: user, error: createError } = await supabase
-      .from("users")
+    const { data: userRaw, error: createError } = await (
+      supabase.from("users") as any
+    )
       .insert({
         name,
         email: email.toLowerCase(),
@@ -58,11 +60,14 @@ export async function POST(req: NextRequest) {
       .select()
       .single();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const user = userRaw as any;
+
     if (createError || !user) {
       console.error("Error creating user:", createError);
       return NextResponse.json(
         { error: "Failed to register user" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -77,13 +82,13 @@ export async function POST(req: NextRequest) {
           role: user.role,
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(
       { error: "Failed to register user" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

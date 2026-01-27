@@ -78,8 +78,9 @@ export default function CreateCoursePage() {
               id: `lesson-${Date.now()}`,
               title: lessonData.title,
               type: lessonData.type as "video" | "text" | "pdf" | "audio",
-              videoUrl: lessonData.videoUrl || "",
+              content: lessonData.content || "",
               description: lessonData.description || "",
+              downloadableFile: lessonData.downloadableFile || "",
               settings: lessonData.settings,
             };
             return { ...ch, lessons: [...ch.lessons, newLesson] };

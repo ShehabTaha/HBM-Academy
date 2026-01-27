@@ -6,7 +6,6 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
 import CourseCard from "@/components/admin/CourseCard";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
 import { useEffect } from "react";
 import CreateCourse from "@/components/admin/CreateCourse";
@@ -18,14 +17,19 @@ const cardData = [
 ];
 
 interface Course {
-  id: string | number;
+  id: string;
   title: string;
-  image: string;
-  rating: number;
+  slug: string;
   description: string;
-  duration: string;
-  students: number;
-  instructor: string;
+  image: string | null;
+  instructor_id: string;
+  category: string | null;
+  level: string | null;
+  price: number;
+  is_published: boolean;
+  duration: number;
+  created_at: string;
+  updated_at: string;
 }
 
 const DashboardHome = () => {
@@ -35,12 +39,19 @@ const DashboardHome = () => {
   useEffect(() => {
     const fetchCourses = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from("courses").select("*");
+
+      // Import the service dynamically to avoid SSR issues
+      const { CourseService } = await import("@/lib/services/courses.service");
+
+      const { courses: data, error } = await CourseService.listCourses(
+        { is_published: true },
+        { page: 1, limit: 100 },
+      );
 
       if (error) {
         toast({
           title: "Error fetching courses",
-          description: error.message,
+          description: error,
           variant: "destructive",
         });
       } else {

@@ -1,0 +1,512 @@
+[
+  {
+    "path": "/dashboard/account",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\account\\page.tsx"
+  },
+  {
+    "path": "/dashboard/analytics",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\analytics\\page.tsx"
+  },
+  {
+    "path": "/dashboard/courses/create/content-uploader",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\courses\\create\\content-uploader\\page.tsx"
+  },
+  {
+    "path": "/dashboard/courses/create/landing",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\courses\\create\\landing\\page.tsx"
+  },
+  {
+    "path": "/dashboard/courses/create",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\courses\\create\\page.tsx"
+  },
+  {
+    "path": "/dashboard/courses/create/pricing",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\courses\\create\\pricing\\page.tsx"
+  },
+  {
+    "path": "/dashboard/courses/create/publish",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\courses\\create\\publish\\page.tsx"
+  },
+  {
+    "path": "/dashboard/courses/create/settings",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\courses\\create\\settings\\page.tsx"
+  },
+  {
+    "path": "/dashboard/courses",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\courses\\page.tsx"
+  },
+  {
+    "path": "/dashboard/courses/[courseId]/manage",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\courses\\[courseId]\\manage\\page.tsx"
+  },
+  {
+    "path": "/dashboard/courses/[courseId]",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\courses\\[courseId]\\page.tsx"
+  },
+  {
+    "path": "/dashboard/home",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\home\\page.tsx"
+  },
+  {
+    "path": "/dashboard/profile",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\profile\\page.tsx"
+  },
+  {
+    "path": "/dashboard/settings",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\settings\\page.tsx"
+  },
+  {
+    "path": "/dashboard/students",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\students\\page.tsx"
+  },
+  {
+    "path": "/dashboard/submissions",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\submissions\\page.tsx"
+  },
+  {
+    "path": "/dashboard/users",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\users\\page.tsx"
+  },
+  {
+    "path": "/dashboard/video-library",
+    "type": "page",
+    "isProtected": true,
+    "file": "app\\(admin)\\dashboard\\video-library\\page.tsx"
+  },
+  {
+    "path": "/api/account/change-password",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\account\\change-password\\route.ts"
+  },
+  {
+    "path": "/api/admin/analytics/competencies",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\analytics\\competencies\\route.ts"
+  },
+  {
+    "path": "/api/admin/analytics/overview",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\analytics\\overview\\route.ts"
+  },
+  {
+    "path": "/api/admin/email/templates",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\email\\templates\\route.ts"
+  },
+  {
+    "path": "/api/admin/email/templates/[id]",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\email\\templates\\[id]\\route.ts"
+  },
+  {
+    "path": "/api/admin/payment/stripe/status",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\payment\\stripe\\status\\route.ts"
+  },
+  {
+    "path": "/api/admin/practical-assessments",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\practical-assessments\\route.ts"
+  },
+  {
+    "path": "/api/admin/practical-assessments/[assessmentId]/evaluate",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\practical-assessments\\[assessmentId]\\evaluate\\route.ts"
+  },
+  {
+    "path": "/api/admin/quiz-results",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\quiz-results\\route.ts"
+  },
+  {
+    "path": "/api/admin/quiz-results/[attemptId]/override-score",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\quiz-results\\[attemptId]\\override-score\\route.ts"
+  },
+  {
+    "path": "/api/admin/settings",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\settings\\route.ts"
+  },
+  {
+    "path": "/api/admin/stats/general",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\stats\\general\\route.ts"
+  },
+  {
+    "path": "/api/admin/students/analytics",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\students\\analytics\\route.ts"
+  },
+  {
+    "path": "/api/admin/students",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\students\\route.ts"
+  },
+  {
+    "path": "/api/admin/students/[studentId]",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\students\\[studentId]\\route.ts"
+  },
+  {
+    "path": "/api/admin/students/[studentId]/suspend",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\students\\[studentId]\\suspend\\route.ts"
+  },
+  {
+    "path": "/api/admin/students/[studentId]/verify-email",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\students\\[studentId]\\verify-email\\route.ts"
+  },
+  {
+    "path": "/api/admin/submissions",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\submissions\\route.ts"
+  },
+  {
+    "path": "/api/admin/submissions/test",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\submissions\\test\\route.ts"
+  },
+  {
+    "path": "/api/admin/submissions/[submissionId]/approve",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\submissions\\[submissionId]\\approve\\route.ts"
+  },
+  {
+    "path": "/api/admin/submissions/[submissionId]/reject",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\submissions\\[submissionId]\\reject\\route.ts"
+  },
+  {
+    "path": "/api/admin/users/analytics",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\users\\analytics\\route.ts"
+  },
+  {
+    "path": "/api/admin/users",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\users\\route.ts"
+  },
+  {
+    "path": "/api/admin/users/[userId]",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\users\\[userId]\\route.ts"
+  },
+  {
+    "path": "/api/admin/users/[userId]/suspend",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\users\\[userId]\\suspend\\route.ts"
+  },
+  {
+    "path": "/api/admin/users/[userId]/verify-email",
+    "type": "api",
+    "isProtected": true,
+    "file": "app\\api\\admin\\users\\[userId]\\verify-email\\route.ts"
+  },
+  {
+    "path": "/api/auth/forgot-password",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\auth\\forgot-password\\route.ts"
+  },
+  {
+    "path": "/api/auth/register",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\auth\\register\\route.ts"
+  },
+  {
+    "path": "/api/auth/reset-password",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\auth\\reset-password\\route.ts"
+  },
+  {
+    "path": "/api/auth/signup",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\auth\\signup\\route.ts"
+  },
+  {
+    "path": "/api/auth/verify-email",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\auth\\verify-email\\route.ts"
+  },
+  {
+    "path": "/api/auth/[...nextauth]",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\auth\\[...nextauth]\\route.ts"
+  },
+  {
+    "path": "/api/courses",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\courses\\route.ts"
+  },
+  {
+    "path": "/api/courses/upload",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\courses\\upload\\route.ts"
+  },
+  {
+    "path": "/api/courses/[id]/landing-page/hero-image",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\courses\\[id]\\landing-page\\hero-image\\route.ts"
+  },
+  {
+    "path": "/api/courses/[id]/landing-page",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\courses\\[id]\\landing-page\\route.ts"
+  },
+  {
+    "path": "/api/courses/[id]/landing-page/upload-hero",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\courses\\[id]\\landing-page\\upload-hero\\route.ts"
+  },
+  {
+    "path": "/api/courses/[id]",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\courses\\[id]\\route.ts"
+  },
+  {
+    "path": "/api/enrollments",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\enrollments\\route.ts"
+  },
+  {
+    "path": "/api/progress",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\progress\\route.ts"
+  },
+  {
+    "path": "/api/test-db",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\test-db\\route.ts"
+  },
+  {
+    "path": "/api/upload",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\upload\\route.ts"
+  },
+  {
+    "path": "/api/user/account/delete",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\user\\account\\delete\\route.ts"
+  },
+  {
+    "path": "/api/user/data/export",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\user\\data\\export\\route.ts"
+  },
+  {
+    "path": "/api/user/email/change",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\user\\email\\change\\route.ts"
+  },
+  {
+    "path": "/api/user/password/change",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\user\\password\\change\\route.ts"
+  },
+  {
+    "path": "/api/user/preferences",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\user\\preferences\\route.ts"
+  },
+  {
+    "path": "/api/user/profile/avatar",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\user\\profile\\avatar\\route.ts"
+  },
+  {
+    "path": "/api/user/profile/details",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\user\\profile\\details\\route.ts"
+  },
+  {
+    "path": "/api/user/profile",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\user\\profile\\route.ts"
+  },
+  {
+    "path": "/api/user/profile/update",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\user\\profile\\update\\route.ts"
+  },
+  {
+    "path": "/api/user/sessions/revoke",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\user\\sessions\\revoke\\route.ts"
+  },
+  {
+    "path": "/api/user/sessions",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\user\\sessions\\route.ts"
+  },
+  {
+    "path": "/api/video-library",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\video-library\\route.ts"
+  },
+  {
+    "path": "/api/video-library/search",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\video-library\\search\\route.ts"
+  },
+  {
+    "path": "/api/video-library/settings",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\video-library\\settings\\route.ts"
+  },
+  {
+    "path": "/api/video-library/storage-usage",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\video-library\\storage-usage\\route.ts"
+  },
+  {
+    "path": "/api/video-library/upload",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\video-library\\upload\\route.ts"
+  },
+  {
+    "path": "/api/video-library/[videoId]/analytics",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\video-library\\[videoId]\\analytics\\route.ts"
+  },
+  {
+    "path": "/api/video-library/[videoId]/duplicate",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\video-library\\[videoId]\\duplicate\\route.ts"
+  },
+  {
+    "path": "/api/video-library/[videoId]",
+    "type": "api",
+    "isProtected": false,
+    "file": "app\\api\\video-library\\[videoId]\\route.ts"
+  },
+  {
+    "path": "/auth/login",
+    "type": "page",
+    "isProtected": false,
+    "file": "app\\auth\\login\\page.tsx"
+  },
+  {
+    "path": "/auth/signup",
+    "type": "page",
+    "isProtected": false,
+    "file": "app\\auth\\signup\\page.tsx"
+  },
+  {
+    "path": "/",
+    "type": "page",
+    "isProtected": false,
+    "file": "app\\page.tsx"
+  },
+  {
+    "path": "/privacy",
+    "type": "page",
+    "isProtected": false,
+    "file": "app\\privacy\\page.tsx"
+  },
+  {
+    "path": "/terms",
+    "type": "page",
+    "isProtected": false,
+    "file": "app\\terms\\page.tsx"
+  },
+  {
+    "path": "/unauthorized",
+    "type": "page",
+    "isProtected": false,
+    "file": "app\\unauthorized\\page.tsx"
+  }
+]

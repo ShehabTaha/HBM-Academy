@@ -2,21 +2,25 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
 import CourseCard from "@/components/admin/CourseCard";
 import EmptyState from "@/components/admin/EmptyCourses";
 import CreateCourse from "@/components/admin/CreateCourse";
 
 interface Course {
-  id: string | number;
+  id: string;
   title: string;
-  image: string;
-  rating: number;
+  slug: string;
   description: string;
-  duration: string;
-  students: number;
-  instructor: string;
+  image: string | null;
+  instructor_id: string;
+  category: string | null;
+  level: string | null;
+  price: number;
+  is_published: boolean;
+  duration: number;
+  created_at: string;
+  updated_at: string;
 }
 
 const CoursesPage = () => {
@@ -27,12 +31,19 @@ const CoursesPage = () => {
   useEffect(() => {
     const fetchCourses = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from("courses").select("*");
+
+      // Import the service dynamically
+      const { CourseService } = await import("@/lib/services/courses.service");
+
+      const { courses: data, error } = await CourseService.listCourses(
+        {},
+        { page: 1, limit: 100 },
+      );
 
       if (error) {
         toast({
           title: "Error fetching courses",
-          description: error.message,
+          description: error,
           variant: "destructive",
         });
       } else {

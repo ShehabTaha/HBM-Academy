@@ -32,12 +32,19 @@ const AdminSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton>
-                  <Link href="/admin/dashboard">Home</Link>
+                  <Link href="/admin/dashboard" data-testid="sidebar-link-home">
+                    Home
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton>
-                  <Link href="/admin/dashboard/channels">Channels</Link>
+                  <Link
+                    href="/admin/dashboard/channels"
+                    data-testid="sidebar-link-channels"
+                  >
+                    Channels
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

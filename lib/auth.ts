@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
-import { authOptions } from "@/app/api/auth/[nextauth]/route";
+import { authOptions } from "@/lib/auth-options";
 
 /**
  * Get the current session on the server side
@@ -30,7 +30,7 @@ export async function isAuthenticated(): Promise<boolean> {
  * Check if user has a specific role
  */
 export async function hasRole(
-  role: "student" | "admin" | "lecturer"
+  role: "student" | "admin" | "lecturer",
 ): Promise<boolean> {
   const user = await getCurrentUser();
   return user?.role === role;

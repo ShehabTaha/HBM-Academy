@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
-import { hashPassword } from "@/lib/auth-utils";
+import bcrypt from "bcryptjs";
 
 const resetPasswordSchema = z.object({
   token: z.string().min(1, "Token is required"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export async function POST(req: NextRequest) {
@@ -15,58 +15,58 @@ export async function POST(req: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: "Validation failed", details: validation.error.issues },
-        { status: 400 }
+        { error: "Invalid request data" },
+        { status: 400 },
       );
     }
 
     const { token, password } = validation.data;
 
-    // Find user with valid token
-    const { data: user, error: findError } = await supabase
-      .from("users")
+    // 1. Check if token exists in password_reset_tokens table and is not expired
+    const { data: tokenData, error: tokenError } = await supabase
+      .from("password_reset_tokens")
       .select("*")
-      .eq("resetPasswordToken", token)
-      .gt("resetPasswordExpires", new Date().toISOString())
-      .is("deletedAt", null)
+      .eq("token", token)
+      .gt("expires_at", new Date().toISOString())
+      .is("used_at", null)
       .single();
 
-    if (!user || findError) {
+    if (tokenError || !tokenData) {
       return NextResponse.json(
         { error: "Invalid or expired reset token" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Hash new password
-    const hashedPassword = await hashPassword(password);
+    // 2. Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Update password and clear reset token
-    const { error: updateError } = await supabase
+    // 3. Update user password
+    const { error: updateUserError } = await supabase
       .from("users")
-      .update({
-        password: hashedPassword,
-        resetPasswordToken: null,
-        resetPasswordExpires: null,
-      })
-      .eq("id", user.id);
+      .update({ password: hashedPassword })
+      .eq("id", tokenData.user_id);
 
-    if (updateError) {
-      console.error("Error updating password:", updateError);
-      return NextResponse.json(
-        { error: "Failed to reset password" },
-        { status: 500 }
-      );
+    if (updateUserError) {
+      console.error("Error updating user password:", updateUserError);
+      throw new Error("Failed to update password");
     }
+
+    // 4. Mark token as used
+    await supabase
+      .from("password_reset_tokens")
+      .update({ used_at: new Date().toISOString() })
+      .eq("id", tokenData.id);
 
     return NextResponse.json({
+      success: true,
       message: "Password reset successfully",
     });
   } catch (error) {
     console.error("Reset password error:", error);
     return NextResponse.json(
       { error: "Failed to reset password" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

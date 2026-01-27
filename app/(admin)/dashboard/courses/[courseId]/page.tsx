@@ -34,7 +34,7 @@ const CourseDetailsPage = () => {
 
       setLoading(true);
       const { data, error } = await supabase
-        .from("courses")
+        .from("courses" as any)
         .select("*")
         .eq("id", params.courseId)
         .single();
@@ -45,10 +45,20 @@ const CourseDetailsPage = () => {
           description: error.message,
           variant: "destructive",
         });
-        // Optional: Redirect back to courses page on error
-        // router.push("/dashboard/courses");
-      } else {
-        setCourse(data);
+      } else if (data) {
+        // Transform data to match Course interface
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const d = data as any;
+        setCourse({
+          id: d.id,
+          title: d.title,
+          image: d.image || "/placeholder-course.jpg",
+          rating: 0, // Data from separate table, defaulting to 0
+          description: d.description,
+          duration: `${d.duration} min`,
+          students: 0, // Data from separate table, defaulting to 0
+          instructor: "Instructor", // Needs join to fetch name
+        });
       }
       setLoading(false);
     };

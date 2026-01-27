@@ -1,24 +1,19 @@
-import { createClient } from "@supabase/supabase-js";
+/**
+ * Main Supabase client export
+ * For backward compatibility, exports browser client by default
+ *
+ * Usage:
+ * - Client components: import { supabase } from '@/lib/supabase'
+ * - Server components: import { createClient } from '@/lib/supabase/server'
+ * - Admin operations: import { createAdminClient } from '@/lib/supabase/admin'
+ */
 
-const supabaseUrl = "https://xpxeqwgexgbhqukxrpai.supabase.co";
-const supabaseAnonKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhweGVxd2dleGdiaHF1a3hycGFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwODA4MzUsImV4cCI6MjA3NjY1NjgzNX0.lcLr-t0kkwfFbu06SwH08r63b0id6RtAtxUAss5bBh4";
+import { createClient as createBrowserClient } from "@/lib/supabase/client";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-if (!supabaseUrl || !supabase) {
-  throw new Error("Missing SUPABASE_URL or SUPABASE_KEY environment variables");
-}
-
-supabase
-  .from("users")
-  .select("*")
-  .then(({ data, error }) => {
-    console.log(data, error);
-  });
+// Export browser client as default for backward compatibility
+export const supabase = createBrowserClient();
 
 export default supabase;
-// Example usage:
 
-// You can now use the `supabase` client to interact with your Supabase database
-// For example, to fetch data from a table called 'users':
+// Re-export types for convenience
+export type { Database } from "@/types/database.types";

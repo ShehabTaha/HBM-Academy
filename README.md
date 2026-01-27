@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HBM Academy - Admin Control Panel
+
+This is the admin control panel for managing the HBM Academy platform. Built with [Next.js](https://nextjs.org) and [Supabase](https://supabase.com).
+
+## Overview
+
+The HBM Academy Admin Panel is a comprehensive management system for administrators to control and monitor the HBM Academy learning platform. This application provides tools for managing courses, users, content, and analytics.
+
+## Features
+
+- **Course Management**: Create, edit, and organize courses with multimedia content
+- **User Management**: Manage platform users and their access
+- **Video Library**: Centralized video content management
+- **Analytics Dashboard**: Monitor platform performance and user engagement
+- **Content Uploader**: Upload and manage course materials
+- **Admin Settings**: Configure platform settings and preferences
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+ installed
+- Supabase account and project configured
+- Admin credentials for authentication
+
+### Installation
+
+1. Clone the repository
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Set up environment variables (copy `.env.example` to `.env.local` and fill in your values)
+
+4. Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. Open [http://localhost:3000](http://localhost:3000) and sign in with admin credentials
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Authentication
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This application requires admin authentication via NextAuth. Only users with the `admin` role can access the dashboard.
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+- **Framework**: Next.js 16 (App Router)
+- **Authentication**: NextAuth
+- **Database**: Supabase
+- **Styling**: Tailwind CSS
+- **UI Components**: Radix UI
+- **Icons**: Lucide React
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Deploy to [Vercel](https://vercel.com) for the best performance:
 
-## Deploy on Vercel
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Make sure to configure your environment variables in your deployment platform.

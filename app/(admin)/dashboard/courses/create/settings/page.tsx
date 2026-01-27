@@ -3,21 +3,33 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { useCourse } from "@/contexts/CourseContext";
 import Image from "next/image";
 
 export default function SettingsPage() {
-  const { chapters } = useCourse();
+  const { metadata, updateMetadata } = useCourse();
 
-  // Form state
-  const [courseName, setCourseName] = useState("");
-  const [courseImage, setCourseImage] = useState<string | null>(null);
+  // Load state from context
+  const {
+    title: courseName,
+    image: courseImage,
+    description,
+    settings: courseSettings,
+  } = metadata;
+
+  // Local state for file (since we can't persist File object easily in context if reloading)
+  // But for wizard it's fine. We'll rely on context for values.
   const [courseImageFile, setCourseImageFile] = useState<File | null>(null);
-  const [description, setDescription] = useState("");
-  const [courseOverview, setCourseOverview] = useState("");
-  const [accessType, setAccessType] = useState<"public" | "private">("public");
-  const [isHidden, setIsHidden] = useState(false);
-  const [tradeFileSource, setTradeFileSource] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -27,9 +39,13 @@ export default function SettingsPage() {
       setCourseImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setCourseImage(reader.result as string);
+        updateMetadata({ image: reader.result as string });
       };
       reader.readAsDataURL(file);
+
+      // Also upload usage logic could go here if we wanted immediate upload,
+      // but we'll probably save it on "Save" or "Publish".
+      // For now, let's keep it as data URL in context for preview.
     }
   };
 
@@ -37,37 +53,39 @@ export default function SettingsPage() {
     fileInputRef.current?.click();
   };
 
+  // We auto-save to context on change, so handleSaveChanges might just be a notification or persistent save if we had draft API
   const handleSaveChanges = () => {
-    // TODO: Implement save functionality
-    console.log({
-      courseName,
-      courseImage: courseImageFile,
-      description,
-      courseOverview,
-      accessType,
-      isHidden,
-      tradeFileSource,
-      chapters,
-    });
+    // In wizard flow, "Save" usually just means "keep in context",
+    // but user might expect persistent save.
+    // For now, context is updated on change, so we can just show success.
+    console.log("Settings saved to context", metadata);
+    // You might want to trigger a toast here
   };
 
   const handleDiscardChanges = () => {
-    // Reset form to initial values
-    setCourseName("");
-    setCourseImage(null);
+    // Reset to defaults
+    updateMetadata({
+      title: "",
+      description: "",
+      image: null,
+      settings: {
+        isPublic: true,
+        isHidden: false,
+        tradeFileSource: false,
+        enableRatings: false,
+        enableDiscussions: false,
+        enableCertificates: false,
+        certificateValidityDays: null,
+      },
+    });
     setCourseImageFile(null);
-    setDescription("");
-    setCourseOverview("");
-    setAccessType("public");
-    setIsHidden(false);
-    setTradeFileSource(false);
   };
 
   return (
-    <div className="w-full max-w-3xl py-8">
+    <div className="w-full py-8">
       <h2 className="text-2xl font-semibold text-gray-900 mb-8">Settings</h2>
 
-      <div className="space-y-8">
+      <div className="space-y-8 pb-10">
         {/* Basic Settings Section */}
         <div className="space-y-6">
           {/* Course Name */}
@@ -82,7 +100,7 @@ export default function SettingsPage() {
               id="courseName"
               placeholder="Enter course name"
               value={courseName}
-              onChange={(e) => setCourseName(e.target.value)}
+              onChange={(e) => updateMetadata({ title: e.target.value })}
               className="w-full"
             />
           </div>
@@ -106,16 +124,14 @@ export default function SettingsPage() {
 
             <div className="flex gap-4 items-start">
               {/* Image Preview */}
-              <div className="w-48 h-28 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 overflow-hidden">
+              <div className="w-48 h-28 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 overflow-hidden relative">
                 {courseImage ? (
-                  <div className="relative w-full h-full">
-                    <Image
-                      src={courseImage}
-                      alt="Course preview"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
+                  <Image
+                    src={courseImage}
+                    alt="Course preview"
+                    fill
+                    className="object-cover"
+                  />
                 ) : (
                   <div className="text-center p-4">
                     <svg
@@ -168,28 +184,7 @@ export default function SettingsPage() {
               id="description"
               placeholder="Enter course description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
-            />
-          </div>
-
-          {/* Course Overview */}
-          <div>
-            <label
-              htmlFor="courseOverview"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Course overview
-            </label>
-            <p className="text-xs text-gray-500 mb-2">
-              Provide an overview of what students will learn in this course
-            </p>
-            <textarea
-              id="courseOverview"
-              placeholder="Enter course overview"
-              value={courseOverview}
-              onChange={(e) => setCourseOverview(e.target.value)}
+              onChange={(e) => updateMetadata({ description: e.target.value })}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
             />
@@ -211,9 +206,11 @@ export default function SettingsPage() {
                   type="radio"
                   name="accessType"
                   value="public"
-                  checked={accessType === "public"}
+                  checked={courseSettings.isPublic}
                   onChange={(e) =>
-                    setAccessType(e.target.value as "public" | "private")
+                    updateMetadata({
+                      settings: { ...courseSettings, isPublic: true },
+                    })
                   }
                   className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                 />
@@ -232,9 +229,11 @@ export default function SettingsPage() {
                   type="radio"
                   name="accessType"
                   value="private"
-                  checked={accessType === "private"}
+                  checked={!courseSettings.isPublic}
                   onChange={(e) =>
-                    setAccessType(e.target.value as "public" | "private")
+                    updateMetadata({
+                      settings: { ...courseSettings, isPublic: false },
+                    })
                   }
                   className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                 />
@@ -255,8 +254,12 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               id="isHidden"
-              checked={isHidden}
-              onChange={(e) => setIsHidden(e.target.checked)}
+              checked={courseSettings.isHidden}
+              onChange={(e) =>
+                updateMetadata({
+                  settings: { ...courseSettings, isHidden: e.target.checked },
+                })
+              }
               className="h-4 w-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             <label htmlFor="isHidden" className="cursor-pointer">
@@ -270,6 +273,116 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Course Features Section */}
+        <div className="space-y-6 pt-6 border-t border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Course Features</h3>
+
+          {/* Course Level */}
+          <div className="space-y-2">
+            <Label>Course Level</Label>
+            <Select
+              value={metadata.level}
+              onValueChange={(val) => updateMetadata({ level: val })}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="beginner">Beginner</SelectItem>
+                <SelectItem value="intermediate">Intermediate</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Separator />
+
+          {/* Enable Course Ratings */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Enable Course Ratings</Label>
+              <p className="text-sm text-muted-foreground">
+                Allow students to rate this course.
+              </p>
+            </div>
+            <Switch
+              checked={courseSettings.enableRatings}
+              onCheckedChange={(val) =>
+                updateMetadata({
+                  settings: { ...courseSettings, enableRatings: val },
+                })
+              }
+            />
+          </div>
+
+          <Separator />
+
+          {/* Enable Discussions */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Enable Discussions</Label>
+              <p className="text-sm text-muted-foreground">
+                Allow students to discuss in lessons.
+              </p>
+            </div>
+            <Switch
+              checked={courseSettings.enableDiscussions}
+              onCheckedChange={(val) =>
+                updateMetadata({
+                  settings: { ...courseSettings, enableDiscussions: val },
+                })
+              }
+            />
+          </div>
+
+          <Separator />
+
+          {/* Enable Certificates */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Enable Certificates</Label>
+                <p className="text-sm text-muted-foreground">
+                  Issue certificates upon completion.
+                </p>
+              </div>
+              <Switch
+                checked={courseSettings.enableCertificates}
+                onCheckedChange={(val) =>
+                  updateMetadata({
+                    settings: { ...courseSettings, enableCertificates: val },
+                  })
+                }
+              />
+            </div>
+
+            {courseSettings.enableCertificates && (
+              <div className="ml-2 pl-4 border-l-2 space-y-2">
+                <Label>Certificate Validity (Days)</Label>
+                <Input
+                  type="number"
+                  className="w-[200px]"
+                  value={courseSettings.certificateValidityDays ?? ""}
+                  onChange={(e) =>
+                    updateMetadata({
+                      settings: {
+                        ...courseSettings,
+                        certificateValidityDays: e.target.value
+                          ? parseInt(e.target.value)
+                          : null,
+                      },
+                    })
+                  }
+                  placeholder="0 = Forever"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Set to 0 or leave empty for no expiration.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Security Section */}
         <div className="space-y-6 pt-6 border-t border-gray-200">
           <h3 className="text-lg font-medium text-gray-900">Security</h3>
@@ -279,8 +392,15 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               id="tradeFileSource"
-              checked={tradeFileSource}
-              onChange={(e) => setTradeFileSource(e.target.checked)}
+              checked={courseSettings.tradeFileSource}
+              onChange={(e) =>
+                updateMetadata({
+                  settings: {
+                    ...courseSettings,
+                    tradeFileSource: e.target.checked,
+                  },
+                })
+              }
               className="h-4 w-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             <label htmlFor="tradeFileSource" className="cursor-pointer">

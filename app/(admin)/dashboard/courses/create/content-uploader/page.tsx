@@ -14,6 +14,8 @@ import {
   Music,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import VideoSelectionModal from "@/components/dashboard/courses/modals/VideoSelectionModal";
+import { Video as LibraryVideo } from "@/types/video-library";
 import {
   DndContext,
   DragOverlay,
@@ -211,6 +213,10 @@ export default function ContentUploaderPage() {
     file: File;
     type: "video" | "text" | "pdf" | "audio";
   } | null>(null);
+  const [libraryPickerOpen, setLibraryPickerOpen] = useState(false);
+  const [activeChapterForLibrary, setActiveChapterForLibrary] = useState<
+    string | null
+  >(null);
   const [lessonName, setLessonName] = useState("");
 
   const getFileType = (file: File): "video" | "text" | "pdf" | "audio" => {
@@ -253,17 +259,20 @@ export default function ContentUploaderPage() {
             id: `lesson-${Date.now()}`,
             title: lessonName,
             type: type,
-            videoUrl: "",
+            content: "",
             description: "",
+            downloadableFile: "",
             settings: {
               isFreePreview: false,
               isPrerequisite: false,
+              enableDiscussions: false,
+              isDownloadable: false,
             },
           };
           return { ...ch, lessons: [...ch.lessons, newLesson] };
         }
         return ch;
-      })
+      }),
     );
 
     setPendingUpload(null);
@@ -275,13 +284,44 @@ export default function ContentUploaderPage() {
     setLessonName("");
   };
 
+  const handleLibraryVideoSelect = (video: LibraryVideo) => {
+    if (!activeChapterForLibrary) return;
+
+    setChapters((prevChapters) =>
+      prevChapters.map((ch) => {
+        if (ch.id === activeChapterForLibrary) {
+          const newLesson: Lesson = {
+            id: `library-${video.id}-${Date.now()}`,
+            title: video.title,
+            type: "video",
+            content: video.file_url,
+            description: video.description || "",
+            duration: video.duration,
+            thumbnail: video.thumbnail_url || undefined,
+            settings: {
+              isFreePreview: false,
+              isPrerequisite: false,
+              enableDiscussions: false,
+              isDownloadable: false,
+            },
+          };
+          return { ...ch, lessons: [...ch.lessons, newLesson] };
+        }
+        return ch;
+      }),
+    );
+
+    setLibraryPickerOpen(false);
+    setActiveChapterForLibrary(null);
+  };
+
   const handleBrowseClick = (chapterId: string) => {
     fileInputRefs.current[chapterId]?.click();
   };
 
   const handleFileChange = (
     event: React.ChangeEvent<HTMLInputElement>,
-    chapterId: string
+    chapterId: string,
   ) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -298,7 +338,7 @@ export default function ContentUploaderPage() {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -330,7 +370,7 @@ export default function ContentUploaderPage() {
         chapters.map((chapter) => {
           if (chapter.id === activeChapterId) {
             const oldIndex = chapter.lessons.findIndex(
-              (l) => l.id === active.id
+              (l) => l.id === active.id,
             );
             const newIndex = chapter.lessons.findIndex((l) => l.id === over.id);
             return {
@@ -339,7 +379,7 @@ export default function ContentUploaderPage() {
             };
           }
           return chapter;
-        })
+        }),
       );
     } else {
       // Moving to a different chapter or empty chapter
@@ -363,7 +403,7 @@ export default function ContentUploaderPage() {
             } else {
               // Adding to non-empty chapter - insert at position
               const targetIndex = chapter.lessons.findIndex(
-                (l) => l.id === over.id
+                (l) => l.id === over.id,
               );
               const newLessons = [...chapter.lessons];
               newLessons.splice(targetIndex + 1, 0, activeLesson);
@@ -383,7 +423,7 @@ export default function ContentUploaderPage() {
   const activeLessonData = activeId
     ? chapters
         .flatMap((ch) =>
-          ch.lessons.map((l) => ({ lesson: l, chapterId: ch.id }))
+          ch.lessons.map((l) => ({ lesson: l, chapterId: ch.id })),
         )
         .find((item) => item.lesson.id === activeId)
     : null;
@@ -495,7 +535,7 @@ export default function ContentUploaderPage() {
                   </SortableContext>
 
                   {/* Upload Section */}
-                  <div className="mt-8 border-2 border-dashed border-gray-200 rounded-xl p-8 bg-gradient-to-br from-gray-50/50 to-white hover:border-blue-300 transition-all duration-200">
+                  <div className="mt-8 border-2 border-dashed border-gray-200 rounded-xl p-8 bg-linear-to-br from-gray-50/50 to-white hover:border-blue-300 transition-all duration-200">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
                         <Plus className="w-8 h-8 text-blue-600" />
@@ -524,6 +564,22 @@ export default function ContentUploaderPage() {
                       >
                         <Plus className="w-4 h-4 mr-2" />
                         Browse Files
+                      </Button>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">
+                          or
+                        </span>
+                      </div>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-blue-600 font-medium h-auto p-0"
+                        onClick={() => {
+                          setActiveChapterForLibrary(chapter.id);
+                          setLibraryPickerOpen(true);
+                        }}
+                      >
+                        Select from Video Library
                       </Button>
                     </div>
                   </div>
@@ -588,6 +644,12 @@ export default function ContentUploaderPage() {
             </div>
           </div>
         )}
+
+        <VideoSelectionModal
+          open={libraryPickerOpen}
+          onOpenChange={setLibraryPickerOpen}
+          onSelect={handleLibraryVideoSelect}
+        />
 
         {/* Drag Overlay */}
         <DragOverlay>

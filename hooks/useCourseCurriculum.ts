@@ -37,9 +37,9 @@ export const useCourseCurriculum = () => {
 
       if (!currentCourseId) {
         // FORCE NEW COURSE CREATION
-        const { data: newCourse, error: createError } = await supabase
-          .from("courses")
-          // @ts-ignore
+        const { data: newCourseRaw, error: createError } = await (
+          supabase.from("courses") as any
+        )
           .insert([
             {
               title: "New Course",
@@ -52,21 +52,28 @@ export const useCourseCurriculum = () => {
 
         if (createError) throw createError;
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const newCourse = newCourseRaw as any;
+
         if (newCourse) {
           currentCourseId = newCourse.id;
           setCourseId(newCourse.id);
           localStorage.setItem(
             "hbm_course_builder_v2",
-            newCourse.id.toString()
+            newCourse.id.toString(),
           );
           setCourseTitle(newCourse.title);
         }
       } else {
-        const { data: course, error: fetchError } = await supabase
-          .from("courses")
+        const { data: courseRaw, error: fetchError } = await (
+          supabase.from("courses") as any
+        )
           .select("*")
           .eq("id", currentCourseId)
           .single();
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const course = courseRaw as any;
 
         if (!fetchError && course) {
           setCourseId(course.id);
@@ -77,9 +84,9 @@ export const useCourseCurriculum = () => {
           // Ideally we need to reset the ID and creating a new one.
           // Simplified: Just set currentCourseId to null so the NEXT run would catch it, but here we can just create it immediately
           // For simplicity, let's just clear and throw error or let the user refresh, but better: create new one.
-          const { data: newCourse, error: createError } = await supabase
-            .from("courses")
-            // @ts-ignore
+          const { data: newCourseRaw, error: createError } = await (
+            supabase.from("courses") as any
+          )
             .insert([
               {
                 title: "New Course",
@@ -90,12 +97,15 @@ export const useCourseCurriculum = () => {
             .select()
             .single();
 
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const newCourse = newCourseRaw as any;
+
           if (newCourse) {
             currentCourseId = newCourse.id;
             setCourseId(newCourse.id);
             localStorage.setItem(
               "hbm_course_builder_v2",
-              newCourse.id.toString()
+              newCourse.id.toString(),
             );
             setCourseTitle(newCourse.title);
           }
@@ -105,32 +115,37 @@ export const useCourseCurriculum = () => {
       if (!currentCourseId) return;
 
       // 2. Fetch Chapters
-      const { data: chaptersData, error: chaptersError } = await supabase
-        .from("chapters")
+      const { data: chaptersData, error: chaptersError } = await (
+        supabase.from("chapters") as any
+      )
         .select(`*, lessons (*)`)
         .eq("course_id", currentCourseId)
         .order("position", { ascending: true });
 
       if (chaptersError) throw chaptersError;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const formattedChapters: Chapter[] = (chaptersData || []).map(
         (ch: any) => ({
           id: ch.id,
           title: ch.title,
           info: ch.info || "",
           isOpen: true,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           lessons: (ch.lessons || [])
             .sort((a: any, b: any) => (a.position || 0) - (b.position || 0))
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .map((l: any) => ({
               id: l.id,
               title: l.title,
               type: l.type || "video",
               chapter_id: l.chapter_id,
             })),
-        })
+        }),
       );
 
       setChapters(formattedChapters);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error("Error fetching data:", error);
       toast({
@@ -150,15 +165,14 @@ export const useCourseCurriculum = () => {
   // Actions
   const toggleChapter = (id: string) => {
     setChapters(
-      chapters.map((ch) => (ch.id === id ? { ...ch, isOpen: !ch.isOpen } : ch))
+      chapters.map((ch) => (ch.id === id ? { ...ch, isOpen: !ch.isOpen } : ch)),
     );
   };
 
   const addChapter = async () => {
     if (!courseId) return;
     try {
-      const { data, error } = await supabase
-        .from("chapters")
+      const { data, error } = await (supabase.from("chapters") as any)
         .insert([
           {
             course_id: courseId,
@@ -182,6 +196,7 @@ export const useCourseCurriculum = () => {
         },
       ]);
       toast({ title: "Success", description: "Chapter added." });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast({
         title: "Error",
@@ -193,10 +208,13 @@ export const useCourseCurriculum = () => {
 
   const deleteChapter = async (id: string) => {
     try {
-      const { error } = await supabase.from("chapters").delete().eq("id", id);
+      const { error } = await (supabase.from("chapters") as any)
+        .delete()
+        .eq("id", id);
       if (error) throw error;
       setChapters(chapters.filter((ch) => ch.id !== id));
       toast({ title: "Chapter deleted" });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast({
         title: "Error",
@@ -208,11 +226,10 @@ export const useCourseCurriculum = () => {
 
   const updateChapterTitle = async (id: string, newTitle: string) => {
     setChapters(
-      chapters.map((ch) => (ch.id === id ? { ...ch, title: newTitle } : ch))
+      chapters.map((ch) => (ch.id === id ? { ...ch, title: newTitle } : ch)),
     );
     try {
-      const { error } = await supabase
-        .from("chapters")
+      const { error } = await (supabase.from("chapters") as any)
         .update({ title: newTitle })
         .eq("id", id);
       if (error) throw error;
@@ -223,8 +240,7 @@ export const useCourseCurriculum = () => {
 
   const addLesson = async (chapterId: string, type: LessonType = "video") => {
     try {
-      const { data, error } = await supabase
-        .from("lessons")
+      const { data, error } = await (supabase.from("lessons") as any)
         .insert([
           {
             chapter_id: chapterId,
@@ -255,8 +271,9 @@ export const useCourseCurriculum = () => {
             };
           }
           return ch;
-        })
+        }),
       );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast({
         title: "Error",
@@ -268,8 +285,7 @@ export const useCourseCurriculum = () => {
 
   const deleteLesson = async (chapterId: string, lessonId: string) => {
     try {
-      const { error } = await supabase
-        .from("lessons")
+      const { error } = await (supabase.from("lessons") as any)
         .delete()
         .eq("id", lessonId);
       if (error) throw error;
@@ -283,8 +299,9 @@ export const useCourseCurriculum = () => {
             };
           }
           return ch;
-        })
+        }),
       );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       toast({
         title: "Error",
@@ -297,7 +314,7 @@ export const useCourseCurriculum = () => {
   const updateLessonTitle = async (
     chapterId: string,
     lessonId: string,
-    newTitle: string
+    newTitle: string,
   ) => {
     setChapters(
       chapters.map((ch) => {
@@ -305,17 +322,16 @@ export const useCourseCurriculum = () => {
           return {
             ...ch,
             lessons: ch.lessons.map((l) =>
-              l.id === lessonId ? { ...l, title: newTitle } : l
+              l.id === lessonId ? { ...l, title: newTitle } : l,
             ),
           };
         }
         return ch;
-      })
+      }),
     );
 
     try {
-      const { error } = await supabase
-        .from("lessons")
+      const { error } = await (supabase.from("lessons") as any)
         .update({ title: newTitle })
         .eq("id", lessonId);
       if (error) throw error;
