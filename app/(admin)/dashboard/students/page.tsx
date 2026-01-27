@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { StudentsPageContent } from "@/components/admin/students/StudentsPageContent"; // Check import path
+import { StudentsPageContent } from "@/components/admin/users/StudentsPageContent";
 
 export default async function StudentsPage() {
   const supabase = await createClient();

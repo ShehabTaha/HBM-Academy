@@ -1,12 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, Mail, Trash, Ban, Download } from "lucide-react";
+import { Trash, Ban, Download } from "lucide-react";
 
 interface BulkActionsBarProps {
   selectedCount: number;
   onSuspend: () => void;
-
   onDelete: () => void;
   onExport: () => void;
 }
@@ -14,7 +13,6 @@ interface BulkActionsBarProps {
 export function BulkActionsBar({
   selectedCount,
   onSuspend,
-
   onDelete,
   onExport,
 }: BulkActionsBarProps) {
