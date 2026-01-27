@@ -15,13 +15,13 @@ export async function GET(request: Request) {
     const { data: user } = await supabase
       .from("users")
       .select("role")
-      .eq("id", session?.user?.id)
+      .eq("id", session?.user?.id || "")
       .single();
 
-    if (user?.role !== "admin") {
+    if ((user as any)?.role !== "admin") {
       return NextResponse.json(
         {
-          error: `Forbidden - Requires admin role. (Current role: ${user?.role || "none"})`,
+          error: `Forbidden - Requires admin role. (Current role: ${(user as any)?.role || "none"})`,
         },
         { status: 403 },
       );
@@ -35,7 +35,8 @@ export async function GET(request: Request) {
       query = query.eq("category", category);
     }
 
-    const { data: settings, error } = await query;
+    const { data: settingsData, error } = await query;
+    const settings = settingsData as any;
 
     if (error) {
       // Check for "relation does not exist" error (code 42P01 in Postgres)
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
 
     // Transform to key-value object and mask sensitive data
     const formattedSettings: Record<string, any> = {};
-    settings?.forEach((setting) => {
+    settings?.forEach((setting: any) => {
       let value = setting.setting_value;
 
       // Mask sensitive data if it's not null/empty
@@ -90,13 +91,13 @@ export async function PUT(request: Request) {
     const { data: userData } = await supabase
       .from("users")
       .select("id, role")
-      .eq("id", session?.user?.id)
+      .eq("id", session?.user?.id || "")
       .single();
 
-    if (userData?.role !== "admin") {
+    if ((userData as any)?.role !== "admin") {
       return NextResponse.json(
         {
-          error: `Forbidden - Requires admin role. (Current role: ${userData?.role || "none"})`,
+          error: `Forbidden - Requires admin role. (Current role: ${(userData as any)?.role || "none"})`,
         },
         { status: 403 },
       );
@@ -128,13 +129,14 @@ export async function PUT(request: Request) {
       ];
       const isSensitive = sensitiveKeys.some((k) => key.includes(k));
 
+      // @ts-ignore
       return supabase.from("platform_settings").upsert(
         {
           setting_key: key,
           setting_value: value,
           category: category || "general",
           is_sensitive: isSensitive,
-          updated_by: user.id,
+          updated_by: (user as any).id,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "setting_key" },

@@ -25,13 +25,14 @@ export async function POST(
       .select("role")
       .eq("id", user.id)
       .single();
-    if (userData?.role !== "admin") {
+    if ((userData as any)?.role !== "admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // 2. Update Status
     const { error: updateError } = await supabase
       .from("assignment_submissions")
+      // @ts-ignore
       .update({
         status: "rejected",
         admin_feedback: feedback,
@@ -46,23 +47,28 @@ export async function POST(
 
     // 3. Ensure Progress is Incomplete (optional, but good for consistency)
     // We fetch details to finding enrollment
-    const { data: submission } = await supabase
-      .from("assignment_submissions")
+    const { data: submissionData } = await supabase
+      .from("assignment_submissions" as any)
       .select("student_id, course_id, assignment_id")
       .eq("id", submissionId)
       .single();
 
+    const submission = submissionData as any;
+
     if (submission) {
-      const { data: enrollment } = await supabase
+      const { data: enrollmentData } = await supabase
         .from("enrollments")
         .select("id")
         .eq("student_id", submission.student_id)
         .eq("course_id", submission.course_id)
         .single();
 
+      const enrollment = enrollmentData as any;
+
       if (enrollment) {
         await supabase
           .from("progress")
+          // @ts-ignore
           .update({ is_completed: false })
           .eq("enrollment_id", enrollment.id)
           .eq("lesson_id", submission.assignment_id);

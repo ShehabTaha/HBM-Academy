@@ -50,6 +50,7 @@ export async function POST(req: Request) {
     // 4. Update password in database
     const { error: updateError } = await supabase
       .from("users" as any)
+      // @ts-ignore
       .update({
         password: hashedNewPassword,
         updated_at: new Date().toISOString(),

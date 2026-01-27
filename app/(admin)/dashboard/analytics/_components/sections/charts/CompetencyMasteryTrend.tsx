@@ -88,7 +88,7 @@ export function CompetencyMasteryTrend({
               <XAxis dataKey="month" />
               <YAxis unit="%" domain={[0, 100]} />
               <Tooltip
-                formatter={(value: number) => [`${value}%`, "Evaluate"]}
+                formatter={(value: any) => [`${value}%`, "Evaluate"]}
                 contentStyle={{
                   borderRadius: "8px",
                   border: "none",

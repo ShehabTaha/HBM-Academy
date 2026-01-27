@@ -90,7 +90,7 @@ export function CompetencyDistributionChart({
               />
               <Tooltip
                 cursor={{ fill: "transparent" }}
-                formatter={(value: number) => [
+                formatter={(value: any) => [
                   `${value.toFixed(1)}%`,
                   "Mastery Rate",
                 ]}

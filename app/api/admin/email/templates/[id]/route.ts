@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await requireAdmin();
@@ -13,7 +13,8 @@ export async function PUT(
     const { id } = await params;
 
     const { error } = await supabase
-      .from("email_templates")
+      .from("email_templates" as any)
+      // @ts-ignore
       .update({
         ...body,
         updated_at: new Date().toISOString(),

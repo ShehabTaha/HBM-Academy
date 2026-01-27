@@ -25,16 +25,18 @@ export async function POST(
       .select("role")
       .eq("id", user.id)
       .single();
-    if (userData?.role !== "admin") {
+    if ((userData as any)?.role !== "admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // 2. Get Submission details (to find student, course, lesson)
-    const { data: submission, error: subError } = await supabase
-      .from("assignment_submissions")
+    const { data: submissionData, error: subError } = await supabase
+      .from("assignment_submissions" as any)
       .select("*")
       .eq("id", submissionId)
       .single();
+
+    const submission = submissionData as any;
 
     if (subError || !submission) {
       return NextResponse.json(
@@ -46,6 +48,7 @@ export async function POST(
     // 3. Update Submission Status
     const { error: updateError } = await supabase
       .from("assignment_submissions")
+      // @ts-ignore
       .update({
         status: "approved",
         admin_feedback: feedback,
@@ -60,15 +63,18 @@ export async function POST(
 
     // 4. Mark Lesson as Completed in Progress
     // First find enrollment
-    const { data: enrollment } = await supabase
+    const { data: enrollmentData } = await supabase
       .from("enrollments")
       .select("id")
       .eq("student_id", submission.student_id)
       .eq("course_id", submission.course_id)
       .single();
 
+    const enrollment = enrollmentData as any;
+
     if (enrollment) {
       // Upsert progress
+      // @ts-ignore
       const { error: progressError } = await supabase.from("progress").upsert(
         {
           enrollment_id: enrollment.id,

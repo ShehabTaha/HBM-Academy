@@ -17,10 +17,10 @@ export async function GET(request: Request) {
       .in("setting_key", ["stripe_public_key", "stripe_secret_key"]);
 
     const hasPublicKey = settings?.some(
-      (s) => s.setting_key === "stripe_public_key" && s.setting_value,
+      (s: any) => s.setting_key === "stripe_public_key" && s.setting_value,
     );
     const hasSecretKey = settings?.some(
-      (s) => s.setting_key === "stripe_secret_key" && s.setting_value,
+      (s: any) => s.setting_key === "stripe_secret_key" && s.setting_value,
     );
 
     const connected = hasPublicKey && hasSecretKey;

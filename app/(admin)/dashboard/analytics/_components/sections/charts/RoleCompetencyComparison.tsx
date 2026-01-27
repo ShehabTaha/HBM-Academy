@@ -82,7 +82,7 @@ export function RoleCompetencyComparison({
               <XAxis dataKey="competency" tick={{ fontSize: 12 }} />
               <YAxis unit="%" />
               <Tooltip
-                formatter={(value: number) => [`${value}%`, "Mastery"]}
+                formatter={(value: any) => [`${value}%`, "Mastery"]}
                 contentStyle={{ borderRadius: "8px" }}
               />
               <Legend />

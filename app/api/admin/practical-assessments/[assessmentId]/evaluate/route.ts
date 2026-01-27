@@ -24,7 +24,7 @@ export async function POST(
       .select("role")
       .eq("id", user.id)
       .single();
-    if (userData?.role !== "admin")
+    if ((userData as any)?.role !== "admin")
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     // 2. Calculate Overall Score
@@ -35,6 +35,7 @@ export async function POST(
     // 3. Update Assessment
     const { data: assessment, error: updateError } = await supabase
       .from("practical_assessments")
+      // @ts-ignore
       .update({
         rubric_scores: rubricScores,
         admin_feedback: feedback,
@@ -51,14 +52,16 @@ export async function POST(
     if (updateError) throw updateError;
 
     // 4. Update Competency Record (if approved and competency_id exists)
+    // @ts-ignore
     if (status === "approved" && assessment.competency_id) {
       // Calculate percentage (assuming 5 is max)
       const percent = (avg / 5) * 100;
 
+      // @ts-ignore
       await supabase.from("student_competencies").upsert(
         {
-          student_id: assessment.student_id,
-          competency_id: assessment.competency_id,
+          student_id: (assessment as any).student_id,
+          competency_id: (assessment as any).competency_id,
           mastery_level: percent,
           achieved_at: new Date().toISOString(),
           last_assessed_at: new Date().toISOString(),

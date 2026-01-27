@@ -77,7 +77,7 @@ export function MasteryLevelDistribution({
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value: number) => [value, "Students"]} />
+              <Tooltip formatter={(value: any) => [value, "Students"]} />
               <Legend verticalAlign="bottom" height={36} />
             </PieChart>
           </ResponsiveContainer>

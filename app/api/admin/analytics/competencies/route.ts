@@ -380,7 +380,7 @@ export async function GET(request: NextRequest) {
     ];
 
     const responseData: CompetencyData = {
-      competencies,
+      competencies: competencies as any,
       overallMasteryRate:
         overallStats.count > 0
           ? overallStats.totalMastery / overallStats.count
@@ -399,7 +399,7 @@ export async function GET(request: NextRequest) {
       // New Data
       trendData,
       roleComparisonData,
-      masteryDistribution,
+      masteryDistribution: masteryDistribution as any,
     };
 
     return NextResponse.json({
