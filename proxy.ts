@@ -3,7 +3,7 @@ import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import { isAllowedAdminEmail } from "@/lib/security/admin-allowlist";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
   // 1. Skip middleware for static assets, NextAuth routes, and images

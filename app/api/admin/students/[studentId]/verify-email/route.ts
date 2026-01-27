@@ -15,8 +15,7 @@ export async function POST(
   if (!user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { error } = await supabase
-    .from("users")
+  const { error } = await (supabase.from("users") as any)
     .update({ is_email_verified: true, updated_at: new Date().toISOString() })
     .eq("id", studentId);
 

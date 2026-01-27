@@ -25,14 +25,14 @@ export async function POST(
 
   // Fetch current bio
   const { data: student } = await supabase
-    .from("users")
+    .from("users" as any)
     .select("bio")
     .eq("id", studentId)
     .single();
-  const newBio = `[SUSPENDED: ${reason}] ${student?.bio || ""}`;
+  const currentBio = (student as any)?.bio || "";
+  const newBio = `[SUSPENDED: ${reason}] ${currentBio}`;
 
-  const { error } = await supabase
-    .from("users")
+  const { error } = await (supabase.from("users") as any)
     .update({
       bio: newBio,
       // deleted_at: new Date().toISOString() // Optional: treat suspend as soft delete?
