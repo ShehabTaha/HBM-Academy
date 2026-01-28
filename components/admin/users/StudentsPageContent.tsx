@@ -11,7 +11,7 @@ import { StudentsFilters } from "./StudentsFilters";
 import { StudentsTable } from "./StudentsTable";
 import { BulkActionsBar } from "./BulkActionsBar";
 import { createColumns } from "./columns";
-import { Student } from "@/types/students";
+import { User as Student } from "@/types/users";
 import { downloadCSV } from "@/utils/export";
 import { useToast } from "@/components/ui/use-toast";
 

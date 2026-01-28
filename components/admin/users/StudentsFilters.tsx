@@ -12,7 +12,6 @@ import {
 import { Search, Filter, X } from "lucide-react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useState, useEffect } from "react";
-import { useDebounce } from "@/hooks/use-debounce"; // Assuming this exists or I'll implement inline
 
 export function StudentsFilters() {
   const router = useRouter();
@@ -26,13 +25,6 @@ export function StudentsFilters() {
   // Debounce search
   // If useDebounce hook doesn't exist, I'll do basic logic here.
   // I'll assume I need to implement simple timeout logic.
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      createQueryString("search", search);
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [search]);
 
   const createQueryString = useCallback(
     (name: string, value: string | null) => {
@@ -49,6 +41,13 @@ export function StudentsFilters() {
     },
     [searchParams, pathname, router],
   );
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      createQueryString("search", search);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [search, createQueryString]);
 
   return (
     <div className="space-y-4">

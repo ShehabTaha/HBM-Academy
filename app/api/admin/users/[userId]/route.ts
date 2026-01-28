@@ -80,20 +80,34 @@ export async function GET(
   });
 
   // Transform enrollments to flatten course data
-  const transformedEnrollments = enrollments?.map((e: any) => ({
-    id: e.id,
-    enrolled_at: e.enrolled_at,
-    completed_at: e.completed_at,
-    progress_percentage: e.progress_percentage,
-    course_title: e.courses?.title || "Unknown Course",
-  }));
+  const transformedEnrollments = enrollments?.map(
+    (e: {
+      id: string;
+      enrolled_at: string;
+      completed_at: string | null;
+      progress_percentage: number;
+      courses: { title: string } | null;
+    }) => ({
+      id: e.id,
+      enrolled_at: e.enrolled_at,
+      completed_at: e.completed_at,
+      progress_percentage: e.progress_percentage,
+      course_title: e.courses?.title || "Unknown Course",
+    }),
+  );
 
   // Transform certificates to flatten course data
-  const transformedCertificates = certificates?.map((c: any) => ({
-    id: c.id,
-    issued_at: c.issued_at,
-    course_title: c.enrollments?.courses?.title || "Unknown Course",
-  }));
+  const transformedCertificates = certificates?.map(
+    (c: {
+      id: string;
+      issued_at: string;
+      enrollments: { courses: { title: string } | null } | null;
+    }) => ({
+      id: c.id,
+      issued_at: c.issued_at,
+      course_title: c.enrollments?.courses?.title || "Unknown Course",
+    }),
+  );
 
   console.log("User Details API Debug:", {
     userId,
@@ -129,8 +143,8 @@ export async function PUT(
 
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase
-    .from("users")
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from("users") as any)
     .update(body)
     .eq("id", userId)
     .select()
@@ -162,8 +176,8 @@ export async function DELETE(
   const supabase = createAdminClient();
 
   // Soft delete by setting deleted_at timestamp
-  const { error } = await supabase
-    .from("users")
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from("users") as any)
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", userId);
 

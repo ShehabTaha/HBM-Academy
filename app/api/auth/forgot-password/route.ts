@@ -46,9 +46,9 @@ export async function POST(req: NextRequest) {
     const { token, expires } = generateTokenWithExpiry(1); // 1 hour expiry
 
     // Save token to password_reset_tokens table
-    const { error: createTokenError } = await supabase
-      .from("password_reset_tokens")
-      .insert({
+    const { error: createTokenError } =
+      await // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from("password_reset_tokens") as any).insert({
         user_id: user.id,
         token: token,
         token_hash: token, // ideally should be hashed, but for simplicity now keeping same.

@@ -71,9 +71,9 @@ export async function GET(request: NextRequest) {
       message: "All checks passed!",
       user: {
         id: user.id,
-        email: userData.email,
-        name: userData.name,
-        role: (userData as any).role,
+        email: (userData as { email: string }).email,
+        name: (userData as { name: string }).name,
+        role: (userData as { role: string }).role,
       },
       database: {
         tableName: "assignment_submissions",

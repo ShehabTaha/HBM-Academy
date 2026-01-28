@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { error: validation.error.errors[0].message },
+        { error: (validation as any).error.errors[0].message },
         { status: 400 },
       );
     }
@@ -51,10 +51,11 @@ export async function POST(req: Request) {
     }
 
     // Update email
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({ email: email })
-      .eq("id", session.user.id);
+    const { error: updateError } =
+      await // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from("users") as any)
+        .update({ email: email })
+        .eq("id", session.user.id);
 
     if (updateError) {
       console.error("Error updating email:", updateError);

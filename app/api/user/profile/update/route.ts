@@ -54,12 +54,13 @@ export async function POST(req: Request) {
     if (avatar !== undefined) updateData.avatar = avatar;
 
     // Update user in database
-    const { data: updatedUser, error: updateError } = await supabase
-      .from("users")
-      .update(updateData)
-      .eq("id", session.user.id)
-      .select()
-      .single();
+    const { data: updatedUser, error: updateError } =
+      await // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from("users") as any)
+        .update(updateData)
+        .eq("id", session.user.id)
+        .select()
+        .single();
 
     if (updateError) {
       console.error("[Profile Update API] Error updating user:", updateError);

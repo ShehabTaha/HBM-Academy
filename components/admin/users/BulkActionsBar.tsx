@@ -5,6 +5,8 @@ import { Trash, Ban, Download } from "lucide-react";
 
 interface BulkActionsBarProps {
   selectedCount: number;
+  onVerify?: () => void;
+  onReset?: () => void;
   onSuspend: () => void;
   onDelete: () => void;
   onExport: () => void;

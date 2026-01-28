@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  if (!adminProfile || adminProfile.role !== "admin") {
+  if (!adminProfile || (adminProfile as { role: string }).role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -131,20 +131,24 @@ export async function GET(req: NextRequest) {
   const stats = await statsQuery();
 
   // 5. Transform Data to match Interface
-  const students = studentsData.map((s: any) => ({
-    ...s,
-    courses_enrolled: s.enrollments ? s.enrollments[0].count : 0,
-    courses_completed: 0, // Need to filter enrollments where completed_at is not null.
-    // .select('enrollments(count)') gets total.
-    // To get completed, we'd need another join or separate query. For list view, total enrolled is often enough or "3/5".
-    // The `select` above was simple. To get completed count per user is expensive.
-    // I'll stick to enrolled count.
-    status: s.deleted_at
-      ? "suspended"
-      : new Date(s.last_active) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-        ? "active"
-        : "inactive",
-  }));
+  const students =
+    studentsData?.map(
+      (s: {
+        enrollments: { count: number }[];
+        deleted_at: string | null;
+        last_active: string;
+      }) => ({
+        ...s,
+        courses_enrolled: s.enrollments ? s.enrollments[0].count : 0,
+        courses_completed: 0,
+        status: s.deleted_at
+          ? "suspended"
+          : new Date(s.last_active) >
+              new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+            ? "active"
+            : "inactive",
+      }),
+    ) || [];
 
   return NextResponse.json({
     students,

@@ -23,8 +23,8 @@ export async function POST(
 
   // Suspend user by setting deleted_at (soft delete)
   // You could also add a separate 'status' or 'suspension_reason' column
-  const { error } = await supabase
-    .from("users")
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase.from("users") as any)
     .update({
       deleted_at: new Date().toISOString(),
       // If you have a suspension_reason column, add it here:

@@ -42,10 +42,11 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // 3. Update user password
-    const { error: updateUserError } = await supabase
-      .from("users")
-      .update({ password: hashedPassword })
-      .eq("id", tokenData.user_id);
+    const { error: updateUserError } =
+      await // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from("users") as any)
+        .update({ password: hashedPassword })
+        .eq("id", (tokenData as any).user_id);
 
     if (updateUserError) {
       console.error("Error updating user password:", updateUserError);
@@ -53,10 +54,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Mark token as used
-    await supabase
-      .from("password_reset_tokens")
+    await // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.from("password_reset_tokens") as any)
       .update({ used_at: new Date().toISOString() })
-      .eq("id", tokenData.id);
+      .eq("id", (tokenData as any).id);
 
     return NextResponse.json({
       success: true,

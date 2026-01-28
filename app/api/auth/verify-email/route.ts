@@ -37,10 +37,11 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Update user's email verification status
-    const { error: updateUserError } = await supabase
-      .from("users")
-      .update({ is_email_verified: true })
-      .eq("id", tokenData.user_id);
+    const { error: updateUserError } =
+      await // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from("users") as any)
+        .update({ is_email_verified: true })
+        .eq("id", (tokenData as any).user_id);
 
     if (updateUserError) {
       console.error("Error updating user verification:", updateUserError);
@@ -48,10 +49,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Mark token as verified
-    await supabase
-      .from("email_verification")
+    await // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.from("email_verification") as any)
       .update({ verified_at: new Date().toISOString() })
-      .eq("id", tokenData.id);
+      .eq("id", (tokenData as any).id);
 
     return NextResponse.json({
       success: true,

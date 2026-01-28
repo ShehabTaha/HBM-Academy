@@ -1,9 +1,9 @@
 import useSWR from "swr";
 import {
-  StudentsResponse,
-  StudentDetailResponse,
-  StudentAnalytics,
-} from "@/types/students";
+  UsersResponse as StudentsResponse,
+  UserDetailResponse as StudentDetailResponse,
+  UserAnalytics as StudentAnalytics,
+} from "@/types/users";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -32,7 +32,7 @@ export function useStudents(
   );
 
   return {
-    students: data?.students || [],
+    students: data?.users || [],
     pagination: data?.pagination,
     stats: data?.stats,
     isLoading,
@@ -48,7 +48,7 @@ export function useStudentDetails(studentId: string | null) {
   );
 
   return {
-    student: data?.student,
+    student: data?.user,
     enrollments: data?.enrollments || [],
     certificates: data?.certificates || [],
     loginHistory: data?.login_history || [],

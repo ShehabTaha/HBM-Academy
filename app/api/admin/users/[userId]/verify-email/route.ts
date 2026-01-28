@@ -21,10 +21,11 @@ export async function POST(
   const supabase = createAdminClient();
 
   // Mark email as verified
-  const { error } = await supabase
-    .from("users")
-    .update({ is_email_verified: true })
-    .eq("id", userId);
+  const { error } =
+    await // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.from("users") as any)
+      .update({ is_email_verified: true })
+      .eq("id", userId);
 
   if (error) {
     console.error("Verify email error:", error);

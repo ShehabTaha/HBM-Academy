@@ -76,10 +76,11 @@ export async function POST(req: Request) {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update password in database
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({ password: hashedPassword })
-      .eq("id", session.user.id);
+    const { error: updateError } =
+      await // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from("users") as any)
+        .update({ password: hashedPassword })
+        .eq("id", session.user.id);
 
     if (updateError) {
       console.error(

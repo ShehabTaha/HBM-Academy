@@ -23,6 +23,8 @@ interface StudentDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   student: User | null;
+  onEdit?: () => void;
+  onVerify?: () => void;
   onSuspend: () => void;
   onDelete: () => void;
 }

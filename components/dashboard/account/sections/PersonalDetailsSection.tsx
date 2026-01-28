@@ -30,6 +30,7 @@ export default function PersonalDetailsSection({
   const [isUpdating, setIsUpdating] = useState(false);
   const [formData, setFormData] = useState({
     phone: profile?.phone || "",
+    date_of_birth: profile?.date_of_birth || "",
     location: profile?.location || "",
     country: profile?.country || "",
     timezone: profile?.timezone || "UTC",
