@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     growthMap.set(key, 0);
   }
 
-  students?.forEach((s) => {
+  students?.forEach((s: { created_at: string }) => {
     const d = new Date(s.created_at);
     const key = d.toLocaleString("default", {
       month: "short",
@@ -50,9 +50,12 @@ export async function GET(req: NextRequest) {
   const { data: enrollments } = await supabase
     .from("enrollments")
     .select("completed_at");
-  const activeEnrolls = enrollments?.filter((e) => !e.completed_at).length || 0;
+  const activeEnrolls =
+    enrollments?.filter((e: { completed_at: string | null }) => !e.completed_at)
+      .length || 0;
   const completedEnrolls =
-    enrollments?.filter((e) => e.completed_at).length || 0;
+    enrollments?.filter((e: { completed_at: string | null }) => e.completed_at)
+      .length || 0;
 
   const enrollment_status = [
     { status: "Active", count: activeEnrolls },
@@ -77,7 +80,7 @@ export async function GET(req: NextRequest) {
     .from("enrollments")
     .select("course_id, courses(title)");
   const courseCounts: Record<string, number> = {};
-  distrib?.forEach((d: any) => {
+  distrib?.forEach((d: { courses: { title: string } | null }) => {
     const title = d.courses?.title || "Unknown";
     courseCounts[title] = (courseCounts[title] || 0) + 1;
   });
