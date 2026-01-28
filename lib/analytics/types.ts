@@ -74,6 +74,8 @@ export interface AnalyticsFilters {
   customEndDate?: Date;
   courses?: string[];
   cohorts?: string[];
+  programs?: string[];
+  roles?: string[];
 }
 
 // ============================================================================

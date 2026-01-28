@@ -256,8 +256,10 @@ export function calculateJobPlacementCorrelation(
   const placementNumeric = placementOutcomes.map((p) => (p ? 1 : 0));
 
   // Calculate means
-  const meanSkills = softSkillsScores.reduce((a, b) => a + b, 0) / n;
-  const meanPlacement = placementNumeric.reduce((a, b) => a + b, 0) / n;
+  const meanSkills =
+    softSkillsScores.reduce((a: number, b: number) => a + b, 0) / n;
+  const meanPlacement =
+    placementNumeric.reduce((a: number, b: number) => a + b, 0) / n;
 
   // Calculate correlation coefficient
   let numerator = 0;

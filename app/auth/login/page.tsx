@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { LoginForm } from "@/components/auth/LoginForm";
@@ -36,9 +37,10 @@ export default function LoginPage() {
       </div>
 
       <div className="mt-6">
-        <LoginForm />
+        <Suspense fallback={<div>Loading...</div>}>
+          <LoginForm />
+        </Suspense>
       </div>
-
       <p className="px-8 text-center text-sm text-muted-foreground mt-8">
         By clicking continue, you agree to our{" "}
         <Link
