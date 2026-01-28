@@ -16,7 +16,7 @@ export function useProgressTracking(enrollmentId: string | null) {
 
   useEffect(() => {
     if (!enrollmentId) {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 0);
       return;
     }
 
@@ -24,6 +24,7 @@ export function useProgressTracking(enrollmentId: string | null) {
 
     // Fetch initial progress
     const fetchProgress = async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from("progress") as any)
         .select("*")
         .eq("enrollment_id", enrollmentId);
@@ -85,7 +86,7 @@ export function useEnrollmentProgress(enrollmentId: string | null) {
 
   useEffect(() => {
     if (!enrollmentId) {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 0);
       return;
     }
 
@@ -209,7 +210,7 @@ export function useLessonProgress(
 
   useEffect(() => {
     if (!enrollmentId || !lessonId) {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 0);
       return;
     }
 
