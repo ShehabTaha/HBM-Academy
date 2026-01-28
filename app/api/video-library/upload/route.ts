@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+
+// Initialize Supabase Admin Client
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
 
 export async function POST(req: NextRequest) {
   // Use NextAuth for authentication
@@ -11,7 +17,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = await createClient();
+  // const supabase = await createClient(); // Removed
 
   try {
     // Check Content-Type to support both JSON (new) and potentially handling legacy if needed,
@@ -49,13 +55,13 @@ export async function POST(req: NextRequest) {
     // Get Public URL
     const {
       data: { publicUrl },
-    } = supabase.storage.from("lecture-videos").getPublicUrl(file_path);
+    } = supabaseAdmin.storage.from("lecture-videos").getPublicUrl(file_path);
 
     const videoId = file_path.split("/")[1]; // Assuming path is user_id/video_id/filename
 
     // 2. Create DB Record
     const { data: video, error: dbError } = await (
-      supabase.from("videos") as any
+      supabaseAdmin.from("videos") as any
     )
       .insert({
         id: videoId || crypto.randomUUID(), // Use ID from path if available, else new

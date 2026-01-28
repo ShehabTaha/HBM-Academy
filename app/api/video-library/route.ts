@@ -1,26 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
+import { createClient } from "@supabase/supabase-js";
+
+// Initialize Supabase Admin Client
+// We use the Service Role Key to bypass RLS since we verify the user via NextAuth
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user: authUser },
-    error: authError,
-  } = await supabase.auth.getUser();
+  // Use NextAuth for authentication
+  const session = await getServerSession(authOptions);
 
-  let user = authUser;
-
-  // Fallback for development if auth is disabled
-  if (!user && process.env.NODE_ENV === "development") {
-    console.warn("No Supabase user session found, using development fallback");
-    user = { id: "00000000-0000-0000-0000-000000000000" } as any;
-  } else if (authError || !user) {
+  if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const { data, error } = await supabase
-      .from("videos" as any)
+    const { data, error } = await supabaseAdmin
+      .from("videos")
       .select("*")
       .order("created_at", { ascending: false });
 
@@ -33,30 +33,21 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  // This is primarily for metadata creation after upload, or if we did multipart upload here directly.
-  // See upload/route.ts for actual file handling usually, but standard REST might put it here.
-  // We will assume this creates the DB record.
-  const supabase = await createClient();
-  const {
-    data: { user: authUser },
-    error: authError,
-  } = await supabase.auth.getUser();
+  // Use NextAuth for authentication
+  const session = await getServerSession(authOptions);
 
-  let user = authUser;
-
-  // Fallback for development if auth is disabled
-  if (!user && process.env.NODE_ENV === "development") {
-    console.warn("No Supabase user session found, using development fallback");
-    user = { id: "00000000-0000-0000-0000-000000000000" } as any;
-  } else if (authError || !user) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const body = await req.json();
-    const { error } = await (supabase.from("videos") as any).insert({
+
+    // Use Admin client to insert, ensuring we manually set the instructor_id
+    // to the authenticated user's ID
+    const { error } = await supabaseAdmin.from("videos").insert({
       ...body,
-      instructor_id: user!.id,
+      instructor_id: session.user.id,
     });
 
     if (error) throw error;
