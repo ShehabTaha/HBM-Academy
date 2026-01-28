@@ -58,7 +58,7 @@ const CourseCard = ({ course }: { course: Course }) => {
           <Image
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             alt={`${course.title} course thumbnail`}
-            src={course.image || "/placeholder-course.jpg"}
+            src={course.image || "/thumbnail%20placeholder.jpg"}
             width={500}
             height={500}
           />

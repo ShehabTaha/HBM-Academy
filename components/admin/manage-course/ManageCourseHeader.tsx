@@ -117,17 +117,11 @@ export function ManageCourseHeader({
         {/* Course Hero */}
         <div className="flex items-start gap-4">
           <div className="relative h-24 w-40 overflow-hidden rounded-lg border bg-gray-100">
-            {course.image ? (
-              <img
-                src={course.image || undefined}
-                alt={course.title}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-gray-400">
-                <p className="text-xs">No image</p>
-              </div>
-            )}
+            <img
+              src={course.image || "/thumbnail%20placeholder.jpg"}
+              alt={course.title}
+              className="h-full w-full object-cover"
+            />
           </div>
           <div>
             <div className="flex items-center gap-3">

@@ -284,19 +284,13 @@ export function CourseOverview({
               Course Thumbnail
             </label>
             <div className="flex items-center gap-4 rounded-lg border border-dashed p-4">
-              {formData.image ? (
-                <div className="relative h-20 w-32 overflow-hidden rounded-md border">
-                  <img
-                    src={formData.image || undefined}
-                    alt="Preview"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="flex h-20 w-32 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                  No Image
-                </div>
-              )}
+              <div className="relative h-20 w-32 overflow-hidden rounded-md border">
+                <img
+                  src={formData.image || "/thumbnail%20placeholder.jpg"}
+                  alt="Preview"
+                  className="h-full w-full object-cover"
+                />
+              </div>
               <div className="flex-1">
                 <Input
                   type="file"
