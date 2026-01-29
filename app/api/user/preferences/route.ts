@@ -25,14 +25,14 @@ export async function PUT(req: Request) {
 
     // Check if profile exists
     const { data: existing } = await supabase
-      .from("user_profiles")
+      .from("user_profiles" as any)
       .select("id, preferences")
       .eq("user_id", session.user.id)
       .single();
 
     // Merge with existing preferences
     const updatedPreferences = {
-      ...(existing?.preferences || {}),
+      ...((existing as any)?.preferences || {}),
       ...preferences,
     };
 
@@ -41,7 +41,7 @@ export async function PUT(req: Request) {
     if (existing) {
       // Update existing profile
       const { data, error } = await supabase
-        .from("user_profiles")
+        .from("user_profiles" as any)
         .update({ preferences: updatedPreferences })
         .eq("user_id", session.user.id)
         .select()
@@ -52,7 +52,7 @@ export async function PUT(req: Request) {
     } else {
       // Create new profile with preferences
       const { data, error } = await supabase
-        .from("user_profiles")
+        .from("user_profiles" as any)
         .insert({ user_id: session.user.id, preferences: updatedPreferences })
         .select()
         .single();
