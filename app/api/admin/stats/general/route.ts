@@ -4,10 +4,10 @@ import { CourseService } from "@/lib/services/courses.service";
 
 import { requireAdmin } from "@/lib/security/requireAdmin";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const auth = await requireAdmin(req);
-    if (!auth.authorized) return auth.response;
+    const { error } = await requireAdmin();
+    if (error) return error;
 
     const [usersResult, coursesResult] = await Promise.all([
       UserService.countUsers("student"),
