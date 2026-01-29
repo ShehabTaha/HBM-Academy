@@ -1,31 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth } from "@/lib/auth";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { requireAdmin } from "@/lib/security/requireAdmin";
 
 export async function GET(request: Request) {
   try {
-    // Verify auth and get session
-    await requireAuth();
+    const { user: adminUser, error: authError } = await requireAdmin();
+    if (authError) return authError;
+
     const supabase = await createClient();
-    const session = await getServerSession(authOptions);
-
-    // Perform fresh role check against DB to handle stale sessions
-    const { data: user } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", session?.user?.id || "")
-      .single();
-
-    if ((user as any)?.role !== "admin") {
-      return NextResponse.json(
-        {
-          error: `Forbidden - Requires admin role. (Current role: ${(user as any)?.role || "none"})`,
-        },
-        { status: 403 },
-      );
-    }
 
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
@@ -82,28 +64,10 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    // Verify auth and get session
-    await requireAuth();
+    const { user, error: authError } = await requireAdmin();
+    if (authError) return authError;
+
     const supabase = await createClient();
-    const session = await getServerSession(authOptions);
-
-    // Perform fresh role check against DB to handle stale sessions
-    const { data: userData } = await supabase
-      .from("users")
-      .select("id, role")
-      .eq("id", session?.user?.id || "")
-      .single();
-
-    if ((userData as any)?.role !== "admin") {
-      return NextResponse.json(
-        {
-          error: `Forbidden - Requires admin role. (Current role: ${(userData as any)?.role || "none"})`,
-        },
-        { status: 403 },
-      );
-    }
-
-    const user = userData; // Maintain 'user' variable for later use
     const body = await request.json();
     const { settings, category } = body;
 

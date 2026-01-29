@@ -157,23 +157,6 @@ export function GeneralTab({ settings, updateSetting }: GeneralTabProps) {
               </p>
             </div>
           </div>
-
-          <div className="grid gap-2 mt-4">
-            <Label htmlFor="theme_color">Theme Color</Label>
-            <div className="flex gap-2">
-              <Input
-                type="color"
-                className="w-12 h-10 p-1 cursor-pointer"
-                value={settings.theme_color || "#0066FF"}
-                onChange={(e) => updateSetting("theme_color", e.target.value)}
-              />
-              <Input
-                value={settings.theme_color || "#0066FF"}
-                onChange={(e) => updateSetting("theme_color", e.target.value)}
-                className="w-32"
-              />
-            </div>
-          </div>
         </CardContent>
       </Card>
 

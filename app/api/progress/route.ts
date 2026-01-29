@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ProgressService } from "@/lib/services/progress.service";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * PUT /api/progress
@@ -24,8 +25,27 @@ export async function PUT(request: NextRequest) {
       last_position,
     } = body;
 
-    // Verify the enrollment belongs to the user
-    // This would be better done in the service with proper auth
+    // SECURITY: Verify the enrollment belongs to the user
+    const supabaseAdmin = createAdminClient();
+    const { data: enrollment, error: enrollmentError } = await (supabaseAdmin
+      .from("enrollments")
+      .select("student_id")
+      .eq("id", enrollment_id)
+      .single() as any);
+
+    if (enrollmentError || !enrollment) {
+      return NextResponse.json(
+        { error: "Enrollment not found" },
+        { status: 404 },
+      );
+    }
+
+    if (
+      enrollment.student_id !== session.user.id &&
+      (session.user as any).role !== "admin"
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const { progress, error } = await ProgressService.updateLessonProgress(
       enrollment_id,
@@ -69,6 +89,28 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { enrollment_id, lesson_id } = body;
+
+    // SECURITY: Verify the enrollment belongs to the user
+    const supabaseAdmin = createAdminClient();
+    const { data: enrollment, error: enrollmentError } = await (supabaseAdmin
+      .from("enrollments")
+      .select("student_id")
+      .eq("id", enrollment_id)
+      .single() as any);
+
+    if (enrollmentError || !enrollment) {
+      return NextResponse.json(
+        { error: "Enrollment not found" },
+        { status: 404 },
+      );
+    }
+
+    if (
+      enrollment.student_id !== session.user.id &&
+      (session.user as any).role !== "admin"
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const { progress, error } = await ProgressService.markLessonComplete(
       enrollment_id,

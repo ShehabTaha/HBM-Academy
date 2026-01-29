@@ -4,8 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { requireAdmin } from "@/lib/security/requireAdmin";
 import { createClient } from "@supabase/supabase-js";
 
 // Use service role key to bypass RLS for admin analytics
@@ -17,10 +16,8 @@ const supabase = createClient(
 export async function GET(request: NextRequest) {
   try {
     // SECURITY: Verify admin access
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user as any).role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -78,7 +75,8 @@ export async function GET(request: NextRequest) {
         const { count, error } = await supabase
           .from("users")
           .select("*", { count: "exact", head: true })
-          .eq("role", "student");
+          .eq("role", "student")
+          .is("deleted_at", null); // Ensure we only count active students
 
         if (!error) totalStudents = count || 0;
       }
@@ -201,7 +199,7 @@ export async function GET(request: NextRequest) {
     // --- 5. Certifications ---
     try {
       // Check if table exists by simple query
-      let certsQuery = supabase
+      const certsQuery = supabase
         .from("student_certifications")
         .select("id", { count: "exact", head: true })
         .eq("status", "passed")
@@ -217,7 +215,7 @@ export async function GET(request: NextRequest) {
 
     // --- 6. Attendance ---
     try {
-      let attendanceQuery = supabase
+      const attendanceQuery = supabase
         .from("attendance")
         .select("status")
         .gte("session_date", start.toISOString())

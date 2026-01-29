@@ -1,15 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/security/requireAdmin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
 
-  // Admin check omitted for brevity in thought, but must be here.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const supabase = createAdminClient();
 
   // 1. Student Growth (Last 12 months)
   // This requires intricate SQL or JS processing.

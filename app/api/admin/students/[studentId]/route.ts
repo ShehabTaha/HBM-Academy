@@ -1,30 +1,16 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-
-// Helper for admin check (duplicated for speed, ideally in a middleware or util)
-async function checkAdmin(supabase: any) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return false;
-  const { data } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  return (data as any)?.role === "admin";
-}
+import { requireAdmin } from "@/lib/security/requireAdmin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ studentId: string }> },
 ) {
-  const { studentId } = await params;
-  const supabase = await createClient(); // Awaited!
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
 
-  if (!(await checkAdmin(supabase))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const { studentId } = await params;
+  const supabase = createAdminClient();
 
   // Fetch Student
   const { data: studentData, error } = await supabase
@@ -85,11 +71,11 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ studentId: string }> },
 ) {
-  const { studentId } = await params;
-  const supabase = await createClient();
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
 
-  if (!(await checkAdmin(supabase)))
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { studentId } = await params;
+  const supabase = createAdminClient();
 
   const body = await req.json();
   const { name, email, bio } = body;
@@ -111,11 +97,11 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ studentId: string }> },
 ) {
-  const { studentId } = await params;
-  const supabase = await createClient();
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
 
-  if (!(await checkAdmin(supabase)))
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { studentId } = await params;
+  const supabase = createAdminClient();
 
   // Soft delete
   const { error } = await supabase

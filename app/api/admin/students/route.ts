@@ -1,28 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/security/requireAdmin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
 
-  // 1. Check Auth & Admin Role
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Check admin role from public users table
-  const { data: adminProfile } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!adminProfile || (adminProfile as { role: string }).role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const supabase = createAdminClient();
 
   // 2. Parse Query Params
   const { searchParams } = new URL(req.url);

@@ -9,6 +9,7 @@ import {
 } from "@/lib/services/storage.service";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
+import { requireAdmin } from "@/lib/security/requireAdmin";
 
 /**
  * POST /api/upload
@@ -42,47 +43,34 @@ export async function POST(request: NextRequest) {
 
     switch (type) {
       case "avatar":
+        // SECURITY: Users can only upload their own avatar unless they are admins
+        if (entityId && entityId !== session.user.id) {
+          const { error: adminError } = await requireAdmin();
+          if (adminError) return adminError;
+        }
         result = await uploadAvatar(entityId || session.user.id, file);
         break;
 
       case "course-thumbnail":
-        if (!entityId) {
-          return NextResponse.json(
-            { error: "Course ID required" },
-            { status: 400 },
-          );
-        }
-        result = await uploadCourseThumbnail(entityId, file);
-        break;
-
       case "video":
-        if (!entityId) {
-          return NextResponse.json(
-            { error: "Lesson ID required" },
-            { status: 400 },
-          );
-        }
-        result = await uploadVideo(entityId, file);
-        break;
-
       case "audio":
-        if (!entityId) {
-          return NextResponse.json(
-            { error: "Lesson ID required" },
-            { status: 400 },
-          );
-        }
-        result = await uploadAudio(entityId, file);
-        break;
-
       case "material":
+        // SECURITY: Only admins can upload course-related content
+        const { error: adminError } = await requireAdmin();
+        if (adminError) return adminError;
+
         if (!entityId) {
           return NextResponse.json(
-            { error: "Lesson ID required" },
+            { error: "Entity ID (Course/Lesson) required" },
             { status: 400 },
           );
         }
-        result = await uploadCourseMaterial(entityId, file);
+
+        if (type === "course-thumbnail")
+          result = await uploadCourseThumbnail(entityId, file);
+        else if (type === "video") result = await uploadVideo(entityId, file);
+        else if (type === "audio") result = await uploadAudio(entityId, file);
+        else result = await uploadCourseMaterial(entityId, file);
         break;
 
       default:

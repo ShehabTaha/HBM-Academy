@@ -1,22 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { requireAdmin } from "@/lib/security/requireAdmin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function DELETE(
   req: NextRequest,
   props: { params: Promise<{ videoId: string }> },
 ) {
-  const params = await props.params;
-  const session = await getServerSession(authOptions);
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
 
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const supabase = createAdminClient();
 
-  const supabase = await createClient();
-
-  const { videoId } = params;
+  const { videoId } = await props.params;
 
   try {
     // 1. Get video to find storage path
@@ -68,16 +63,12 @@ export async function PUT(
   req: NextRequest,
   props: { params: Promise<{ videoId: string }> },
 ) {
-  const params = await props.params;
-  const session = await getServerSession(authOptions);
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
 
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const supabase = createAdminClient();
 
-  const supabase = await createClient();
-
-  const { videoId } = params;
+  const { videoId } = await props.params;
 
   try {
     const body = await req.json();

@@ -1,14 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { User, UserProfile } from "@/types/account";
-import { useProfileUpdate } from "@/hooks/account/useProfileUpdate";
-import { EmailChangeDialog } from "../EmailChangeDialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Loader2, Mail, ExternalLink, RefreshCcw } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Loader2, BellRing, Plus, X, Send, Save } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { useAdminNotificationSettings } from "@/hooks/account/useAdminNotificationSettings";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { NotificationFrequency } from "@/lib/validations/admin-notifications";
 
 interface EmailNotificationsSectionProps {
   user: User;
@@ -16,212 +30,296 @@ interface EmailNotificationsSectionProps {
   refresh: () => void;
 }
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+const FREQUENCY_OPTIONS: { value: NotificationFrequency; label: string }[] = [
+  { value: "immediate", label: "Immediate" },
+  { value: "daily", label: "Daily Digest" },
+  { value: "off", label: "Off" },
+];
 
 export default function EmailNotificationsSection({
   user,
-  profile,
-  refresh,
 }: EmailNotificationsSectionProps) {
-  const { isUpdating, updatePreferences } = useProfileUpdate();
-  const [preferences, setPreferences] = useState(profile.preferences);
+  const {
+    settings,
+    isLoading,
+    isSaving,
+    isSendingTest,
+    updateSettings,
+    sendTestNotification,
+  } = useAdminNotificationSettings();
 
-  // Email Change State
-  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
 
-  const handleToggle = (key: string) => {
-    const k = key as keyof typeof preferences;
-    const newPrefs = { ...preferences, [k]: !preferences[k] };
-    setPreferences(newPrefs);
+  const handleFrequencyChange = (
+    key: keyof typeof settings.preferences,
+    value: NotificationFrequency,
+  ) => {
+    updateSettings({
+      ...settings,
+      preferences: {
+        ...settings.preferences,
+        [key]: value,
+      },
+    });
   };
 
-  const handleSave = async () => {
-    const result = await updatePreferences(profile.user_id, preferences);
-    if (result.success) refresh();
+  const handleAddEmail = () => {
+    if (!newEmail || !newEmail.includes("@")) return;
+    if (settings.recipient_emails.includes(newEmail)) return;
+
+    updateSettings({
+      ...settings,
+      recipient_emails: [...settings.recipient_emails, newEmail],
+    });
+    setNewEmail("");
   };
 
-  const notificationItems = [
-    {
-      key: "notification_emails",
-      label: "Course Updates",
-      description: "Receive emails when course updates are published",
-    },
-    {
-      key: "marketing_emails",
-      label: "Marketing Emails",
-      description: "Receive news, special offers, and promotions",
-    },
-    {
-      key: "newsletter",
-      label: "Newsletter",
-      description: "Subscribe to our weekly newsletter",
-    },
-    {
-      key: "enrollment_confirmations",
-      label: "Enrollment Confirmations",
-      description: "Get confirmation when you enroll in a course",
-    },
-    {
-      key: "progress_notifications",
-      label: "Progress Notifications",
-      description: "Email when you complete lessons or courses",
-    },
-    {
-      key: "discussion_replies",
-      label: "Discussion Replies",
-      description: "Get notified when someone replies to your discussion",
-    },
-  ];
+  const handleRemoveEmail = (email: string) => {
+    updateSettings({
+      ...settings,
+      recipient_emails: settings.recipient_emails.filter((e) => e !== email),
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-8 flex justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const renderFrequencySelect = (
+    key: keyof typeof settings.preferences,
+    currentValue: NotificationFrequency,
+  ) => (
+    <Select
+      value={currentValue}
+      onValueChange={(val) =>
+        handleFrequencyChange(key, val as NotificationFrequency)
+      }
+    >
+      <SelectTrigger className="w-[140px]">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {FREQUENCY_OPTIONS.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
+    <div className="p-8 max-w-5xl space-y-8">
+      <div>
         <h3 className="text-xl font-bold text-gray-900">
-          Email & Notifications
+          Admin Notifications & Alerts
         </h3>
-        <p className="text-sm text-gray-500">Manage your email preferences</p>
+        <p className="text-sm text-gray-500">
+          Configure operational and security notifications for administrators.
+        </p>
       </div>
 
-      <div className="space-y-8">
-        {/* Email Status */}
-        <div className="bg-blue-50 rounded-lg p-6 flex items-start space-x-4 border border-blue-100">
-          <div className="bg-blue-100 p-2 rounded-lg">
-            <Mail className="h-6 w-6 text-blue-600" />
-          </div>
-          <div className="flex-1">
-            <h4 className="text-sm font-semibold text-blue-900">
-              Primary Email Status
-            </h4>
-            <p className="text-sm text-blue-700 mt-1">
-              Your primary email is used for account security and course
-              updates.
-            </p>
-            <div className="flex items-center space-x-4 mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white"
-                onClick={() => setIsEmailDialogOpen(true)}
+      <div className="grid gap-6">
+        {/* Recipients Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Notification Recipients</CardTitle>
+            <CardDescription>
+              Who should receive these alerts? (Your account email is default)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <Badge
+                variant="secondary"
+                className="px-3 py-1 text-sm bg-blue-50 text-blue-700 border-blue-100 mb-1"
               >
-                Change Email Address
-                <ExternalLink className="ml-2 h-3 w-3" />
-              </Button>
+                {user.email} (You)
+              </Badge>
+              {settings.recipient_emails.map((email) => (
+                <Badge
+                  key={email}
+                  variant="outline"
+                  className="px-3 py-1 text-sm flex items-center gap-2 mb-1"
+                >
+                  {email}
+                  <X
+                    className="h-3 w-3 cursor-pointer hover:text-red-600"
+                    onClick={() => handleRemoveEmail(email)}
+                  />
+                </Badge>
+              ))}
+            </div>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-blue-600 hover:bg-blue-100"
-              >
-                <RefreshCcw className="mr-2 h-3 w-3" />
-                Resend Verification
+            <div className="flex gap-2 max-w-md">
+              <Input
+                placeholder="Add another recipient email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddEmail()}
+              />
+              <Button onClick={handleAddEmail} variant="outline" size="icon">
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Preferences Toggles */}
+        {/* Categories */}
         <div className="space-y-6">
-          <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-            Communication Preferences
-          </h4>
-
-          <div className="space-y-4">
-            {notificationItems.map((item) => (
-              <div
-                key={item.key}
-                className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors"
-              >
-                <div className="space-y-0.5">
-                  <Label className="text-base font-semibold text-gray-900">
-                    {item.label}
-                  </Label>
-                  <p className="text-sm text-gray-500">{item.description}</p>
+          {/* A) Student Activity */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-50 rounded-lg">
+                  <BellRing className="h-5 w-5 text-indigo-600" />
                 </div>
-                <Switch
-                  checked={
-                    (preferences[
-                      item.key as keyof typeof preferences
-                    ] as boolean) ?? false
-                  }
-                  onCheckedChange={() => handleToggle(item.key)}
-                />
+                <CardTitle className="text-base">
+                  Student Activity Alerts
+                </CardTitle>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Frequency */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-            Email Frequency
-          </h4>
-          <RadioGroup
-            defaultValue="immediately"
-            className="grid grid-cols-1 md:grid-cols-2 gap-4"
-          >
-            {[
-              {
-                id: "immediately",
-                label: "Immediately",
-                description: "Receive emails as they happen",
-              },
-              {
-                id: "daily",
-                label: "Daily Digest",
-                description: "One email per day with all updates",
-              },
-              {
-                id: "weekly",
-                label: "Weekly Digest",
-                description: "One email every Monday",
-              },
-              {
-                id: "never",
-                label: "Never",
-                description: "Turn off all non-essential emails",
-              },
-            ].map((option) => (
-              <div
-                key={option.id}
-                className="relative flex items-center space-x-3 p-4 rounded-xl border border-gray-100 cursor-pointer hover:border-blue-200"
-              >
-                <RadioGroupItem value={option.id} id={option.id} />
-                <Label htmlFor={option.id} className="cursor-pointer">
-                  <div className="font-semibold text-gray-900">
-                    {option.label}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {option.description}
-                  </div>
-                </Label>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>New Assignment Submission</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Detailed alert when a student submits work.
+                  </p>
+                </div>
+                {renderFrequencySelect(
+                  "assignment_submission",
+                  settings.preferences.assignment_submission,
+                )}
               </div>
-            ))}
-          </RadioGroup>
-        </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Quiz Submission</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Alert on quiz completion.
+                  </p>
+                </div>
+                {renderFrequencySelect(
+                  "quiz_submission",
+                  settings.preferences.quiz_submission,
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Student Issue Reports</Label>
+                  <p className="text-sm text-muted-foreground">
+                    If a student reports a technical issue.
+                  </p>
+                </div>
+                {renderFrequencySelect(
+                  "student_report",
+                  settings.preferences.student_report,
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-        <div className="pt-6 border-t border-gray-100 flex justify-end">
-          <Button onClick={handleSave} disabled={isUpdating}>
-            {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Preferences
-          </Button>
+          {/* B) Operations */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-amber-50 rounded-lg">
+                  <Loader2 className="h-5 w-5 text-amber-600" />
+                </div>
+                <CardTitle className="text-base">Operations & Data</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Failed Import / Jobs</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Critical failures in background jobs or imports.
+                  </p>
+                </div>
+                {renderFrequencySelect(
+                  "job_failed",
+                  settings.preferences.job_failed,
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Analytics Refresh Failure</Label>
+                  <p className="text-sm text-muted-foreground">
+                    If nightly data aggregation fails.
+                  </p>
+                </div>
+                {renderFrequencySelect(
+                  "analytics_refresh_failed",
+                  settings.preferences.analytics_refresh_failed,
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* D) Security */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-red-50 rounded-lg">
+                  <BellRing className="h-5 w-5 text-red-600" />
+                </div>
+                <CardTitle className="text-base">Security Alerts</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>New Device Login</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Admin login from unknown IP/Device.
+                  </p>
+                </div>
+                {renderFrequencySelect(
+                  "new_device_login",
+                  settings.preferences.new_device_login,
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Failed Login Attempts</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Multiple failed attempts detected.
+                  </p>
+                </div>
+                {renderFrequencySelect(
+                  "failed_login_attempts",
+                  settings.preferences.failed_login_attempts,
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      <EmailChangeDialog
-        user={user}
-        isOpen={isEmailDialogOpen}
-        onOpenChange={setIsEmailDialogOpen}
-        onSuccess={refresh}
-      />
+      <div className="flex justify-between items-center pt-6 border-t">
+        <Button
+          variant="outline"
+          onClick={sendTestNotification}
+          disabled={isSendingTest}
+        >
+          {isSendingTest ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="mr-2 h-4 w-4" />
+          )}
+          Send Test Notification
+        </Button>
+
+        <Button disabled>
+          <Save className="mr-2 h-4 w-4" />
+          Auto-Saved
+        </Button>
+      </div>
     </div>
   );
 }

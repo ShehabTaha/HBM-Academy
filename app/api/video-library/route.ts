@@ -1,22 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
-import { createClient } from "@supabase/supabase-js";
-
-// Initialize Supabase Admin Client
-// We use the Service Role Key to bypass RLS since we verify the user via NextAuth
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+import { requireAdmin } from "@/lib/security/requireAdmin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
-  // Use NextAuth for authentication
-  const session = await getServerSession(authOptions);
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
 
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const supabaseAdmin = createAdminClient();
 
   try {
     const { data, error } = await supabaseAdmin
@@ -33,21 +23,17 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  // Use NextAuth for authentication
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
 
   try {
     const body = await req.json();
+    const supabaseAdmin = createAdminClient();
 
-    // Use Admin client to insert, ensuring we manually set the instructor_id
-    // to the authenticated user's ID
+    const { user } = await requireAdmin(); // We know it's admin if we reach here
     const { error } = await supabaseAdmin.from("videos").insert({
       ...body,
-      instructor_id: session.user.id,
+      instructor_id: user?.id,
     });
 
     if (error) throw error;

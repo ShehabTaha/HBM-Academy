@@ -1,44 +1,56 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
-import { isAllowedAdminEmail } from "./admin-allowlist";
+import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
+import { authOptions } from "@/lib/auth-options";
+import { isAllowedAdminEmail } from "@/lib/security/admin-allowlist";
 
-/**
- * Protects an API route by requiring the user to be an admin and in the allowlist.
- * Returns the user's token info if successful, otherwise returns a NextResponse error.
- */
-export async function requireAdmin(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+export type AdminUser = {
+  id: string;
+  email: string;
+  role: string | "admin";
+  name?: string | null;
+  image?: string | null;
+};
 
-  if (!token) {
+export async function requireAdmin() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.email) {
     return {
-      authorized: false,
-      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+      user: null as AdminUser | null,
+      error: NextResponse.json(
+        { error: "Unauthorized: No active session" },
+        { status: 401 },
+      ),
     };
   }
 
-  // Check both role AND email allowlist
-  const isAllowed = isAllowedAdminEmail(token.email);
-  const isAdmin = token.role === "admin" || token.role === "lecturer";
-
-  if (!isAllowed || !isAdmin) {
+  // 1. Check Email Allowlist (First line of defense)
+  if (!isAllowedAdminEmail(session.user.email)) {
     console.warn(
-      `[Security] Blocked unauthorized access attempt: ${token.email} (Role: ${token.role})`,
+      `[Security] Blocked unauthorized email: ${session.user.email}`,
     );
     return {
-      authorized: false,
-      response: NextResponse.json(
-        { error: "Forbidden: Restricted Access" },
+      user: null,
+      error: NextResponse.json(
+        { error: "Forbidden: Email not in admin allowlist" },
         { status: 403 },
       ),
     };
   }
 
-  return {
-    authorized: true,
-    user: {
-      id: token.id as string,
-      email: token.email as string,
-      role: token.role as string,
-    },
-  };
+  // 2. Check Role (Second line of defense)
+  if (session.user.role !== "admin") {
+    console.warn(
+      `[Security] Blocked non-admin role: ${session.user.role} (${session.user.email})`,
+    );
+    return {
+      user: null,
+      error: NextResponse.json(
+        { error: "Forbidden: User does not have admin role" },
+        { status: 403 },
+      ),
+    };
+  }
+
+  return { user: session.user as AdminUser, error: null };
 }

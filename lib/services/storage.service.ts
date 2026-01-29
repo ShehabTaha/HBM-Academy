@@ -92,7 +92,15 @@ export class StorageService {
     path: string,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const supabase = createClient();
+      const isServer = typeof window === "undefined";
+      let supabase;
+
+      if (isServer) {
+        const { createAdminClient } = await import("@/lib/supabase/admin");
+        supabase = createAdminClient();
+      } else {
+        supabase = createClient();
+      }
 
       const { error } = await supabase.storage.from(bucket).remove([path]);
 
@@ -127,7 +135,15 @@ export class StorageService {
     expiresIn: number = 3600, // 1 hour default
   ): Promise<{ url?: string; error?: string }> {
     try {
-      const supabase = createClient();
+      const isServer = typeof window === "undefined";
+      let supabase;
+
+      if (isServer) {
+        const { createAdminClient } = await import("@/lib/supabase/admin");
+        supabase = createAdminClient();
+      } else {
+        supabase = createClient();
+      }
 
       const { data, error } = await supabase.storage
         .from(bucket)

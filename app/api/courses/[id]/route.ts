@@ -53,7 +53,6 @@ export async function PUT(
   const params = await props.params;
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -67,7 +66,7 @@ export async function PUT(
     if (
       existingCourse &&
       existingCourse.instructor_id !== session.user.id &&
-      session.user.role !== "admin"
+      (session.user as any).role !== "admin"
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -98,7 +97,6 @@ export async function DELETE(
   const params = await props.params;
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -111,7 +109,7 @@ export async function DELETE(
     if (
       course &&
       course.instructor_id !== session.user.id &&
-      session.user.role !== "admin"
+      (session.user as any).role !== "admin"
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

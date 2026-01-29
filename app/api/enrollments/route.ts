@@ -10,9 +10,22 @@ import { authOptions } from "@/lib/auth-options";
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const studentId = searchParams.get("student_id");
     const courseId = searchParams.get("course_id");
+
+    // Ownership check: If studentId is provided, it must match current user OR user must be admin
+    if (
+      studentId &&
+      studentId !== session.user.id &&
+      (session.user as any).role !== "admin"
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     if (studentId) {
       const { enrollments, error } =

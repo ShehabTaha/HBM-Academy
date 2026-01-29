@@ -1,19 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-options";
+import { requireAdmin } from "@/lib/security/requireAdmin";
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Check admin role
-  if ((session.user as { role?: string }).role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
 
   // Use admin client to bypass RLS policies
   const supabase = createAdminClient();
@@ -28,18 +19,23 @@ export async function GET(req: NextRequest) {
   const offset = (page - 1) * limit;
 
   // 3. Build Query for students only (exclude admins and lecturers)
+  // Start with a basic query
   let query = supabase
     .from("users")
     .select("*, enrollments(count)", { count: "exact" })
-    .eq("role", "student")
-    .is("deleted_at", null);
+    .eq("role", "student");
+
+  // Handle Deleted/Suspended Status
+  if (statusFilter === "suspended") {
+    // Explicitly ask for deleted users
+    query = query.not("deleted_at", "is", null);
+  } else {
+    // Default: Only active (non-deleted) users
+    query = query.is("deleted_at", null);
+  }
 
   if (search) {
     query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
-  }
-
-  if (statusFilter === "suspended") {
-    // Logic for suspended if using `deleted_at` or similar
   }
 
   if (searchParams.get("verified")) {

@@ -1,20 +1,11 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth-options";
+import { requireAdmin } from "@/lib/security/requireAdmin";
 import { createClient } from "@supabase/supabase-js";
-import { StorageService } from "@/lib/services/storage.service";
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.email) {
-      // Strict check, add role check if needed
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Optional: Verify admin role
-    // if (session.user.role !== 'admin') ...
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
