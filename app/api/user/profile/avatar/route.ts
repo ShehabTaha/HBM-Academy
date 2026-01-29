@@ -63,8 +63,7 @@ export async function POST(req: Request) {
     } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
     // Update user record with new avatar URL
-    const { error: updateError } = await supabase
-      .from("users")
+    const { error: updateError } = await (supabase.from("users") as any)
       .update({ avatar: publicUrl })
       .eq("id", session.user.id);
 

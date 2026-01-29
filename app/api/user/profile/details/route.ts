@@ -55,8 +55,7 @@ export async function PUT(req: Request) {
     if (social_links !== undefined) updateData.social_links = social_links;
 
     // Check if profile exists
-    const { data: existing } = await supabase
-      .from("user_profiles")
+    const { data: existing } = await (supabase.from("user_profiles") as any)
       .select("id")
       .eq("user_id", session.user.id)
       .single();
@@ -65,8 +64,7 @@ export async function PUT(req: Request) {
 
     if (existing) {
       // Update existing profile
-      const { data, error } = await supabase
-        .from("user_profiles")
+      const { data, error } = await (supabase.from("user_profiles") as any)
         .update(updateData)
         .eq("user_id", session.user.id)
         .select()
@@ -76,8 +74,7 @@ export async function PUT(req: Request) {
       result = data;
     } else {
       // Create new profile
-      const { data, error } = await supabase
-        .from("user_profiles")
+      const { data, error } = await (supabase.from("user_profiles") as any)
         .insert({ user_id: session.user.id, ...updateData })
         .select()
         .single();
