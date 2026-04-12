@@ -33,7 +33,7 @@ export default function PlatformSettingsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-5xl mx-auto">
+    <div className="flex flex-col gap-6 p-6 w-full mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
@@ -80,7 +80,7 @@ export default function PlatformSettingsPage() {
 
       {/* Floating Save Bar */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t shadow-lg md:pl-72 z-20">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+        <div className="w-full px-6 mx-auto flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
             {hasUnsavedChanges ? (
               <span className="text-amber-600 font-medium">

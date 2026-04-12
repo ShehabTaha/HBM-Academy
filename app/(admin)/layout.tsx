@@ -97,24 +97,18 @@ function AppSidebar() {
         `}
         collapsible="icon"
       >
-        <SidebarHeader className="flex flex-col gap-1 px-5 pt-4 pb-2 ">
+        <SidebarHeader className="flex flex-col gap-1 px-3 pt-4 pb-2 ">
           {/* Logo and title */}
           <div className="flex items-center  gap-2">
             <Image
-              src="https://horizons-cdn.hostinger.com/51932ab3-81fd-4818-a897-f8f7513b0735/53134d16e871b8173f959fb0e15b222a.png"
+              src="/logo.svg"
               alt="Logo"
-              width={70}
+              width={60}
               height={60}
-              className={` mx-0 transition-all ease-in-out
-              ${
-                state === "collapsed"
-                  ? "w-[80] h-[60] max-w-none ml-0"
-                  : " left-5.5 relative"
-              }
-              `}
+              className="transition-all ease-in-out"
             />
             {state === "expanded" && (
-              <div className="flex flex-col">
+              <div className="flex flex-col right-3">
                 <p className="text-3xl font-medium whitespace-nowrap transition-all ease-in-out">
                   HBM
                   <span className="relative right-[-5] top-[-25] text-sm">

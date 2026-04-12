@@ -10,9 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import { Upload } from "lucide-react";
 
 interface GeneralTabProps {
   settings: Partial<PlatformSettings>;
@@ -88,75 +85,7 @@ export function GeneralTab({ settings, updateSetting }: GeneralTabProps) {
             </p>
           </div>
 
-          <Separator />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label>Platform Logo</Label>
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-48 bg-muted rounded-md flex items-center justify-center text-muted-foreground text-xs overflow-hidden border">
-                  {settings.platform_logo_url ? (
-                    <img
-                      src={settings.platform_logo_url}
-                      alt="Logo"
-                      className="h-full w-full object-contain"
-                    />
-                  ) : (
-                    "No Logo"
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Button variant="outline" size="sm" className="w-full">
-                    <Upload className="w-4 h-4 mr-2" /> Upload Logo
-                  </Button>
-                  <Input
-                    placeholder="Or enter URL"
-                    className="h-8 text-xs"
-                    value={settings.platform_logo_url || ""}
-                    onChange={(e) =>
-                      updateSetting("platform_logo_url", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Recommended: 200x50px, PNG or SVG
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Platform Favicon</Label>
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-muted rounded-md flex items-center justify-center text-muted-foreground text-xs border">
-                  {settings.platform_favicon_url ? (
-                    <img
-                      src={settings.platform_favicon_url}
-                      alt="Favicon"
-                      className="h-8 w-8 object-contain"
-                    />
-                  ) : (
-                    "Icon"
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Button variant="outline" size="sm" className="w-full">
-                    <Upload className="w-4 h-4 mr-2" /> Upload
-                  </Button>
-                  <Input
-                    placeholder="Or enter URL"
-                    className="h-8 text-xs"
-                    value={settings.platform_favicon_url || ""}
-                    onChange={(e) =>
-                      updateSetting("platform_favicon_url", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Recommended: 32x32px
-              </p>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
@@ -173,7 +102,9 @@ export function GeneralTab({ settings, updateSetting }: GeneralTabProps) {
                 id="support_email"
                 type="email"
                 value={settings.support_email || ""}
-                onChange={(e) => updateSetting("support_email", e.target.value)}
+                onChange={(e) =>
+                  updateSetting("support_email", e.target.value)
+                }
                 placeholder="support@example.com"
               />
             </div>
