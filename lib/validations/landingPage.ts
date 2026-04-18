@@ -33,6 +33,7 @@ export const ReviewSchema = z.object({
   id: z.string(),
   name: z.string().max(50, "Name must be at most 50 characters"),
   avatar: z.string().optional(),
+  role: z.string().max(50, "Role must be at most 50 characters").optional(),
   rating: z.number().min(1).max(5),
   comment: z.string().max(500, "Comment must be at most 500 characters"),
   date: z.string().optional(),
@@ -48,6 +49,10 @@ export const LandingPageSettingsSchema = z.object({
     .optional(),
   hero_gradient: HeroGradientSchema.optional(),
   hero_image_adjustments: HeroImageAdjustmentsSchema.optional(),
+  hero_title: z
+    .string()
+    .max(100, "Title must be at most 100 characters")
+    .optional(),
   hero_subtitle: z
     .string()
     .max(150, "Subtitle must be at most 150 characters")
@@ -55,6 +60,14 @@ export const LandingPageSettingsSchema = z.object({
   hero_cta_text: z
     .string()
     .max(50, "CTA text must be at most 50 characters")
+    .optional(),
+  show_watch_trailer: z.boolean().optional(),
+  watch_trailer_label: z
+    .string()
+    .max(30, "Label must be at most 30 characters")
+    .optional(),
+  watch_trailer_url: z
+    .union([z.string().url("Must be a valid URL"), z.literal("")])
     .optional(),
   show_instructor_in_hero: z.boolean().optional(),
 
@@ -79,6 +92,8 @@ export const LandingPageSettingsSchema = z.object({
 
   // Reviews Settings
   reviews_source: z.enum(["manual", "database"]).default("database").optional(),
+  show_real_reviews: z.boolean().optional(),
+  show_custom_reviews: z.boolean().optional(),
   reviews_count: z.number().min(1).max(10).optional(),
   reviews_sort_by: z.enum(["newest", "highest_rating"]).optional(),
   manual_reviews: z.array(ReviewSchema).optional(),

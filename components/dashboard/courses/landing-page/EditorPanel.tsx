@@ -17,6 +17,7 @@ interface EditorPanelProps {
   updateSettings: (updates: Partial<LandingPageSettings>) => void;
   uploadHeroImage: (file: File) => Promise<{ url: string; path: string }>;
   deleteHeroImage: (path: string) => Promise<boolean>;
+  uploadReviewAvatar: (file: File) => Promise<{ url: string; path: string }>;
   isDirty: boolean;
   save: () => Promise<void>;
   discard: () => void;
@@ -28,6 +29,7 @@ export default function EditorPanel({
   updateSettings,
   uploadHeroImage,
   deleteHeroImage,
+  uploadReviewAvatar,
   isDirty,
   save,
   discard,
@@ -98,6 +100,7 @@ export default function EditorPanel({
             <StudentReviewsEditor
               settings={settings}
               updateSettings={updateSettings}
+              uploadReviewAvatar={uploadReviewAvatar}
             />
           </section>
         )}

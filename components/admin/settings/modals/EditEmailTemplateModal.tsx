@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmailTemplate } from "@/types/settings";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 interface EditEmailTemplateModalProps {
   template: EmailTemplate;
@@ -31,6 +32,7 @@ export function EditEmailTemplateModal({
   const [htmlContent, setHtmlContent] = useState(template.template_html);
   const [textContent, setTextContent] = useState(template.template_text);
   const [isSaving, setIsSaving] = useState(false);
+  const [htmlTab, setHtmlTab] = useState<"visual" | "code">("visual");
 
   useEffect(() => {
     setSubject(template.subject);
@@ -97,13 +99,50 @@ export function EditEmailTemplateModal({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="html">Email Body (HTML)</Label>
-            <Textarea
-              id="html"
-              value={htmlContent}
-              onChange={(e) => setHtmlContent(e.target.value)}
-              className="font-mono min-h-[300px]"
-            />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="html">Email Body (HTML)</Label>
+              {/* Tab switcher */}
+              <div className="flex items-center border rounded-md overflow-hidden text-xs">
+                <button
+                  type="button"
+                  onClick={() => setHtmlTab("visual")}
+                  className={`px-3 py-1.5 transition-colors ${
+                    htmlTab === "visual"
+                      ? "bg-blue-600 text-white"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  Visual
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHtmlTab("code")}
+                  className={`px-3 py-1.5 transition-colors ${
+                    htmlTab === "code"
+                      ? "bg-blue-600 text-white"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  Code
+                </button>
+              </div>
+            </div>
+
+            {htmlTab === "visual" ? (
+              <RichTextEditor
+                value={htmlContent}
+                onChange={setHtmlContent}
+                placeholder="Compose your email body..."
+                minHeight={300}
+              />
+            ) : (
+              <Textarea
+                id="html"
+                value={htmlContent}
+                onChange={(e) => setHtmlContent(e.target.value)}
+                className="font-mono min-h-[300px]"
+              />
+            )}
           </div>
 
           <div className="grid gap-2">

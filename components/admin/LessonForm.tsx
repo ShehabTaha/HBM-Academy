@@ -3,12 +3,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import {
-  Bold,
-  Italic,
-  Underline,
-  List,
-  ListOrdered,
   Video,
   FileText,
   Type,
@@ -23,25 +19,8 @@ import {
   CheckSquare2,
   X,
   Library,
-  Strikethrough,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlignJustify,
-  Indent,
-  Outdent,
-  Link,
-  Minus,
-  Quote,
-  Undo2,
-  Redo2,
-  Code,
-  Highlighter,
-  Superscript,
-  Subscript,
 } from "lucide-react";
 import VideoSelectionModal from "@/components/dashboard/courses/modals/VideoSelectionModal";
-import type { Video as LibraryVideo } from "@/types/video-library";
 import Image from "next/image";
 
 export type LessonType =
@@ -589,253 +568,6 @@ export default function LessonForm({
     );
   };
 
-  const editorRef = useRef<HTMLDivElement>(null);
-
-  // Keep content state in sync with the contentEditable div
-  const handleEditorInput = () => {
-    const html = editorRef.current?.innerHTML ?? "";
-    setContent(html);
-    if (errors.content) setErrors({ ...errors, content: undefined });
-  };
-
-  // Sync content into the editor (on mount, type change, or draft load)
-  const isInitialLoad = useRef(true);
-  useEffect(() => {
-    if (editorRef.current && (type === "text" || type === "assignment")) {
-      const currentHtml = editorRef.current.innerHTML;
-      // Only update if it's different and we are NOT currently focused (to avoid jumping)
-      // or if it's the very first load
-      if (currentHtml !== content && (document.activeElement !== editorRef.current || isInitialLoad.current)) {
-        editorRef.current.innerHTML = content;
-        isInitialLoad.current = false;
-      }
-    }
-  }, [type, content]); // content added to deps to sync draft/initial data
-
-  const exec = (command: string, value?: string) => {
-    editorRef.current?.focus();
-    document.execCommand(command, false, value);
-    handleEditorInput();
-  };
-
-  const insertLink = () => {
-    const url = prompt("Enter URL:");
-    if (url) exec("createLink", url);
-  };
-
-  const sep = <div className="w-px h-5 bg-gray-300 mx-0.5 shrink-0" />;
-
-  const ToolBtn = ({
-    onClick,
-    title,
-    children,
-    active,
-  }: {
-    onClick: () => void;
-    title: string;
-    children: React.ReactNode;
-    active?: boolean;
-  }) => (
-    <button
-      type="button"
-      title={title}
-      onMouseDown={(e) => {
-        e.preventDefault(); // keep focus in editor
-        onClick();
-      }}
-      className={`h-7 w-7 flex items-center justify-center rounded transition-colors
-        ${
-          active
-            ? "bg-blue-100 text-blue-700"
-            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-        }`}
-    >
-      {children}
-    </button>
-  );
-
-  const renderRichTextEditor = () => (
-    <div className="border rounded-md shadow-sm overflow-hidden">
-      {/* ── Toolbar ── */}
-      <div className="flex items-center gap-0.5 p-2 border-b bg-gray-50 flex-wrap">
-
-        {/* Undo / Redo */}
-        <ToolBtn onClick={() => exec("undo")} title="Undo">
-          <Undo2 size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("redo")} title="Redo">
-          <Redo2 size={14} />
-        </ToolBtn>
-
-        {sep}
-
-        {/* Block format (headings + paragraph) */}
-        <select
-          title="Text style"
-          className="h-7 text-xs border rounded px-1 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
-          defaultValue=""
-          onChange={(e) => {
-            exec("formatBlock", e.target.value);
-            e.target.value = "";
-          }}
-        >
-          <option value="" disabled>Style</option>
-          <option value="p">Paragraph</option>
-          <option value="h1">Heading 1</option>
-          <option value="h2">Heading 2</option>
-          <option value="h3">Heading 3</option>
-          <option value="h4">Heading 4</option>
-          <option value="blockquote">Blockquote</option>
-          <option value="pre">Code block</option>
-        </select>
-
-        {/* Font size */}
-        <select
-          title="Font size"
-          className="h-7 text-xs border rounded px-1 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
-          defaultValue=""
-          onChange={(e) => {
-            exec("fontSize", e.target.value);
-            e.target.value = "";
-          }}
-        >
-          <option value="" disabled>Size</option>
-          <option value="1">Tiny</option>
-          <option value="2">Small</option>
-          <option value="3">Normal</option>
-          <option value="4">Medium</option>
-          <option value="5">Large</option>
-          <option value="6">X-Large</option>
-          <option value="7">Huge</option>
-        </select>
-
-        {sep}
-
-        {/* Inline formatting */}
-        <ToolBtn onClick={() => exec("bold")} title="Bold">
-          <Bold size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("italic")} title="Italic">
-          <Italic size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("underline")} title="Underline">
-          <Underline size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("strikeThrough")} title="Strikethrough">
-          <Strikethrough size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("superscript")} title="Superscript">
-          <Superscript size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("subscript")} title="Subscript">
-          <Subscript size={14} />
-        </ToolBtn>
-
-        {sep}
-
-        {/* Text & highlight color */}
-        <label title="Text color" className="relative h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 cursor-pointer">
-          <Type size={14} className="text-gray-600" />
-          <input
-            type="color"
-            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-            onChange={(e) => exec("foreColor", e.target.value)}
-            title="Text color"
-          />
-        </label>
-        <label title="Highlight color" className="relative h-7 w-7 flex items-center justify-center rounded hover:bg-gray-100 cursor-pointer">
-          <Highlighter size={14} className="text-gray-600" />
-          <input
-            type="color"
-            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-            onChange={(e) => exec("hiliteColor", e.target.value)}
-            title="Highlight color"
-          />
-        </label>
-
-        {sep}
-
-        {/* Alignment */}
-        <ToolBtn onClick={() => exec("justifyLeft")} title="Align left">
-          <AlignLeft size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("justifyCenter")} title="Align center">
-          <AlignCenter size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("justifyRight")} title="Align right">
-          <AlignRight size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("justifyFull")} title="Justify">
-          <AlignJustify size={14} />
-        </ToolBtn>
-
-        {sep}
-
-        {/* Lists */}
-        <ToolBtn onClick={() => exec("insertUnorderedList")} title="Bullet list">
-          <List size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("insertOrderedList")} title="Numbered list">
-          <ListOrdered size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("outdent")} title="Decrease indent">
-          <Outdent size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("indent")} title="Increase indent">
-          <Indent size={14} />
-        </ToolBtn>
-
-        {sep}
-
-        {/* Extras */}
-        <ToolBtn onClick={insertLink} title="Insert link">
-          <Link size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("insertHorizontalRule")} title="Horizontal rule">
-          <Minus size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("formatBlock", "blockquote")} title="Blockquote">
-          <Quote size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("formatBlock", "pre")} title="Code block">
-          <Code size={14} />
-        </ToolBtn>
-        <ToolBtn onClick={() => exec("removeFormat")} title="Clear formatting">
-          <X size={14} />
-        </ToolBtn>
-      </div>
-
-      {/* ── Editable area ── */}
-      <style>{`
-        .editor-content:empty:before {
-          content: attr(data-placeholder);
-          color: #9ca3af;
-          pointer-events: none;
-          display: block;
-        }
-        .editor-content h1 { font-size: 2rem; font-weight: bold; margin: 0.5rem 0; }
-        .editor-content h2 { font-size: 1.5rem; font-weight: bold; margin: 0.5rem 0; }
-        .editor-content h3 { font-size: 1.25rem; font-weight: bold; margin: 0.5rem 0; }
-        .editor-content h4 { font-size: 1.125rem; font-weight: bold; margin: 0.5rem 0; }
-        .editor-content blockquote { border-left: 4px solid #d1d5db; padding-left: 1rem; font-style: italic; color: #6b7280; margin: 1rem 0; }
-        .editor-content pre { background: #f3f4f6; border-radius: 4px; padding: 0.5rem; font-family: monospace; font-size: 0.875rem; overflow-x: auto; }
-        .editor-content ul { list-style-type: disc; padding-left: 1.5rem; margin: 1rem 0; }
-        .editor-content ol { list-style-type: decimal; padding-left: 1.5rem; margin: 1rem 0; }
-        .editor-content a { color: #2563eb; text-decoration: underline; }
-        .editor-content hr { border: 0; border-top: 1px solid #d1d5db; margin: 1rem 0; }
-        .editor-content p { margin: 0.5rem 0; }
-      `}</style>
-      <div
-        ref={editorRef}
-        contentEditable
-        suppressContentEditableWarning
-        onInput={handleEditorInput}
-        className="editor-content w-full p-4 min-h-[300px] outline-none resize-y text-sm"
-        data-placeholder="Enter content here..."
-        style={{ minHeight: 300 }}
-      />
-    </div>
-  );
 
   return (
     <div className="w-full max-w-7xl bg-white p-8 rounded-lg border shadow-sm">
@@ -1074,7 +806,15 @@ export default function LessonForm({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               {type === "assignment" ? "Assignment Instructions" : "Content"}
             </label>
-            {renderRichTextEditor()}
+            <RichTextEditor
+              value={content}
+              onChange={(html) => {
+                setContent(html);
+                if (errors.content) setErrors({ ...errors, content: undefined });
+              }}
+              placeholder="Enter content here..."
+              minHeight={300}
+            />
             {errors.content && (
               <p className="text-red-500 text-sm mt-2">{errors.content}</p>
             )}
@@ -1290,11 +1030,11 @@ export default function LessonForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Description (Optional)
           </label>
-          <textarea
-            className="w-full p-3 border rounded-md text-sm outline-none resize-y min-h-[100px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Add a description for this lesson..."
+          <RichTextEditor
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={setDescription}
+            placeholder="Add a description for this lesson..."
+            minHeight={120}
           />
           <p className="text-xs text-gray-500 mt-1">
             Provide additional context or information about this lesson

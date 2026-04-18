@@ -15,6 +15,7 @@ import { CourseLevel } from "@/types/database.types";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { CourseService } from "@/lib/services/courses.service";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 // import { uploadCourseThumbnail } from "@/lib/services/storage.service"; // Switched to API route
 
@@ -268,15 +269,12 @@ export function CourseOverview({
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
               Description
             </label>
-            <textarea
-              className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              value={formData.description}
-              onChange={(e) => handleChange("description", e.target.value)}
+            <RichTextEditor
+              value={formData.description || ""}
+              onChange={(html) => handleChange("description", html)}
               placeholder="Describe what students will learn..."
+              minHeight={120}
             />
-            <div className="text-xs text-muted-foreground text-right">
-              {formData.description.length} characters
-            </div>
           </div>
 
           <div className="space-y-2">

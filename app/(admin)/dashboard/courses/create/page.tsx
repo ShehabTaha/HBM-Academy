@@ -68,7 +68,7 @@ export default function CreateCoursePage() {
 
     if (editingLessonId) {
       // Update existing lesson
-      updateLesson(activeChapterId, editingLessonId, lessonData as any);
+      updateLesson(activeChapterId, editingLessonId, lessonData as LessonData);
     } else {
       // Add new lesson using setChapters
       setChapters((prevChapters) =>

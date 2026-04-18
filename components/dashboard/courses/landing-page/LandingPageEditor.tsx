@@ -23,6 +23,7 @@ export default function LandingPageEditor({
     discard,
     uploadHeroImage,
     deleteHeroImage,
+    uploadReviewAvatar,
   } = useLandingPageEditor(courseId);
 
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
@@ -90,6 +91,7 @@ export default function LandingPageEditor({
             updateSettings={updateSettings}
             uploadHeroImage={uploadHeroImage}
             deleteHeroImage={deleteHeroImage}
+            uploadReviewAvatar={uploadReviewAvatar}
             isDirty={isDirty}
             save={save}
             discard={discard}

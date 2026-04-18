@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "../ui/button";
 import { useRouter } from "next/navigation";
 import React from "react";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 const AddCourse = () => {
   const router = useRouter();
@@ -67,15 +68,13 @@ const AddCourse = () => {
         <label htmlFor="description" className="block text-sm font-medium mb-2">
           Description
         </label>
-        <textarea
-          id="description"
-          name="description"
+        <RichTextEditor
           value={formData.description}
-          onChange={handleChange}
-          required
-          rows={4}
-          className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onChange={(html) =>
+            setFormData({ ...formData, description: html })
+          }
           placeholder="Enter course description"
+          minHeight={120}
         />
       </div>
 

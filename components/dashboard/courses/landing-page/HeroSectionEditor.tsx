@@ -30,7 +30,6 @@ export default function HeroSectionEditor({
   settings,
   updateSettings,
   uploadHeroImage,
-  deleteHeroImage,
 }: HeroSectionEditorProps) {
   const [uploading, setUploading] = useState(false);
 
@@ -117,7 +116,8 @@ export default function HeroSectionEditor({
             </div>
 
             {settings.hero_background_image_url ? (
-              <div className="relative aspect-[16/6] w-full overflow-hidden rounded-md border bg-white shadow-sm">
+              <div className="relative aspect-16/6 w-full overflow-hidden rounded-md border bg-white shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={settings.hero_background_image_url || undefined}
                   alt="Hero Preview"
@@ -355,6 +355,25 @@ export default function HeroSectionEditor({
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-gray-700">
+              Hero Title
+            </label>
+            <span className="text-[10px] text-gray-400">
+              {(settings.hero_title || "").length}/100
+            </span>
+          </div>
+          <Input
+            placeholder="Master the Art of Modern Web Design"
+            value={settings.hero_title || ""}
+            onChange={(e) =>
+              updateSettings({ hero_title: e.target.value.slice(0, 100) })
+            }
+            className="text-sm font-bold"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-700">
               Hero Subtitle
             </label>
             <span className="text-[10px] text-gray-400">
@@ -384,6 +403,62 @@ export default function HeroSectionEditor({
             onChange={(e) => updateSettings({ hero_cta_text: e.target.value })}
             className="text-sm"
           />
+        </div>
+
+        {/* Watch Trailer Configuration */}
+        <div className="flex flex-col gap-3 rounded-lg border bg-gray-50 p-4">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="show_watch_trailer"
+              checked={settings.show_watch_trailer ?? false}
+              onChange={(e) =>
+                updateSettings({ show_watch_trailer: e.target.checked })
+              }
+              className="h-4 w-4 rounded border-gray-300 text-primary-blue focus:ring-primary-blue"
+            />
+            <label
+              htmlFor="show_watch_trailer"
+              className="text-sm text-gray-700 font-medium"
+            >
+              Show &quot;Watch Trailer&quot; Button
+            </label>
+          </div>
+
+          {settings.show_watch_trailer && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-medium text-gray-600">
+                  Button Label
+                </label>
+                <Input
+                  placeholder="Watch Trailer"
+                  value={settings.watch_trailer_label || ""}
+                  onChange={(e) =>
+                    updateSettings({
+                      watch_trailer_label: e.target.value.slice(0, 30),
+                    })
+                  }
+                  className="text-sm"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-medium text-gray-600">
+                  Trailer Video URL
+                </label>
+                <Input
+                  type="url"
+                  placeholder="https://youtube.com/watch?v=..."
+                  value={settings.watch_trailer_url || ""}
+                  onChange={(e) =>
+                    updateSettings({ watch_trailer_url: e.target.value })
+                  }
+                  className="text-sm"
+                />
+                <p className="text-[10px] text-gray-400">Must be a valid URL</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3">

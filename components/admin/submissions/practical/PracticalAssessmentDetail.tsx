@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { PracticalAssessment, DEFAULT_RUBRIC } from "@/types/practical-types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -18,6 +17,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 import { Check, X, ExternalLink } from "lucide-react";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 interface PracticalAssessmentDetailProps {
   assessment: PracticalAssessment;
@@ -201,34 +201,37 @@ export default function PracticalAssessmentDetail({
 
           <div className="grid gap-2">
             <Label>Strengths</Label>
-            <Textarea
+            <RichTextEditor
               value={feedback.strengths}
-              onChange={(e) =>
-                setFeedback({ ...feedback, strengths: e.target.value })
+              onChange={(html) =>
+                setFeedback({ ...feedback, strengths: html })
               }
               placeholder="What did the student do well?"
+              minHeight={120}
             />
           </div>
 
           <div className="grid gap-2">
             <Label>Areas for Improvement</Label>
-            <Textarea
+            <RichTextEditor
               value={feedback.improvements}
-              onChange={(e) =>
-                setFeedback({ ...feedback, improvements: e.target.value })
+              onChange={(html) =>
+                setFeedback({ ...feedback, improvements: html })
               }
               placeholder="Where can the student improve?"
+              minHeight={120}
             />
           </div>
 
           <div className="grid gap-2">
             <Label>Recommendations</Label>
-            <Textarea
+            <RichTextEditor
               value={feedback.recommendations}
-              onChange={(e) =>
-                setFeedback({ ...feedback, recommendations: e.target.value })
+              onChange={(html) =>
+                setFeedback({ ...feedback, recommendations: html })
               }
               placeholder="Actionable next steps..."
+              minHeight={120}
             />
           </div>
         </div>

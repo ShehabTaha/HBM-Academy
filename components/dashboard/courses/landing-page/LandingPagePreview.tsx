@@ -32,15 +32,23 @@ export default function LandingPagePreview({
     hero_subtitle,
     hero_cta_text,
     show_instructor_in_hero,
+    hero_title,
+    show_watch_trailer,
+    watch_trailer_label,
     show_overview,
     show_learning_outcomes,
     show_curriculum,
-    show_instructor,
     show_reviews,
     show_faqs,
     learning_outcomes,
     faqs,
   } = settings;
+
+  const showRealReviews = settings.show_real_reviews ?? true;
+  const showCustomReviews = settings.show_custom_reviews ?? false;
+  // Legacy fallback
+  const isCustomMode = showCustomReviews || settings.reviews_source === "manual";
+  const isRealMode = showRealReviews || settings.reviews_source === "database";
 
   // Hero Style
   const getHeroStyle = (): React.CSSProperties => {
@@ -97,8 +105,8 @@ export default function LandingPagePreview({
           <div className="bg-blue-600/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-widest">
             Course Preview
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight">
-            Master the Art of Modern Web Design
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight wrap-break-word">
+            {hero_title || "Master the Art of Modern Web Design"}
           </h1>
           <p className="text-lg md:text-xl text-blue-50/90 font-medium">
             {hero_subtitle ||
@@ -109,9 +117,11 @@ export default function LandingPagePreview({
             <button className="bg-white text-blue-600 px-8 py-4 rounded-xl font-bold text-lg shadow-xl shadow-blue-900/20 hover:scale-105 transition-transform">
               {hero_cta_text || "Enroll Now"}
             </button>
-            <button className="bg-white/10 backdrop-blur-md border border-white/20 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/20 transition-all">
-              Watch Trailer
-            </button>
+            {show_watch_trailer && (
+              <button className="bg-white/10 backdrop-blur-md border border-white/20 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/20 transition-all">
+                {watch_trailer_label || "Watch Trailer"}
+              </button>
+            )}
           </div>
 
           {show_instructor_in_hero && (
@@ -186,7 +196,7 @@ export default function LandingPagePreview({
         <section className="py-20 bg-gray-900 text-white px-6">
           <div className="max-w-5xl mx-auto">
             <h2 className="text-3xl font-bold mb-10 text-center">
-              What You'll Learn
+              What You&apos;ll Learn
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
               {(learning_outcomes?.length
@@ -272,33 +282,36 @@ export default function LandingPagePreview({
                     : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
               }`}
             >
-              {(settings.reviews_source === "manual" &&
-              settings.manual_reviews?.length
-                ? settings.manual_reviews
-                : [
-                    {
-                      name: "John Doe",
-                      role: "UX Designer",
-                      comment:
-                        "This course completely changed my approach to design. The layout module is purely gold!",
-                      rating: 5,
-                    },
-                    {
-                      name: "Sarah Smith",
-                      role: "Frontend Developer",
-                      comment:
-                        "I finally understand how to merge aesthetics with code perfectly. Highly recommended!",
-                      rating: 5,
-                    },
-                    {
-                      name: "Alex Johnson",
-                      role: "Creative Director",
-                      comment:
-                        "Premium content. The best investment I've made in my career this year.",
-                      rating: 5,
-                    },
-                  ]
-              ).map((review: any, i: number) => (
+              {(() => {
+                const dbReviews = [
+                  {
+                    name: "John Doe",
+                    role: "UX Designer",
+                    comment:
+                      "This course completely changed my approach to design. The layout module is purely gold!",
+                    rating: 5,
+                  },
+                  {
+                    name: "Sarah Smith",
+                    role: "Frontend Developer",
+                    comment:
+                      "I finally understand how to merge aesthetics with code perfectly. Highly recommended!",
+                    rating: 5,
+                  },
+                  {
+                    name: "Alex Johnson",
+                    role: "Creative Director",
+                    comment:
+                      "Premium content. The best investment I've made in my career this year.",
+                    rating: 5,
+                  },
+                ];
+                
+                const customRev = isCustomMode && settings.manual_reviews?.length ? settings.manual_reviews : [];
+                const realRev = isRealMode ? dbReviews : [];
+                
+                return [...customRev, ...realRev];
+              })().map((review: { rating?: number; comment?: string; text?: string; avatar?: string; name: string; role?: string }, i: number) => (
                 <div
                   key={i}
                   className={`bg-white rounded-2xl shadow-xl shadow-blue-200/20 flex flex-col gap-4 ${
@@ -318,18 +331,18 @@ export default function LandingPagePreview({
                       />
                     ))}
                   </div>
-                  <p className="text-gray-600 italic break-words">
-                    "{review.comment || review.text}"
+                  <p className="text-gray-600 italic wrap-break-word">
+                    &quot;{review.comment || review.text}&quot;
                   </p>
                   <div className="flex items-center gap-3 mt-2 border-t pt-4 justify-center md:justify-start">
-                    <div className="h-10 w-10 shrink-0 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold overflow-hidden border border-gray-100">
                       {review.avatar ? (
                         <Image
                           src={review.avatar}
                           alt={review.name}
                           width={40}
                           height={40}
-                          className="rounded-full"
+                          className="h-full w-full object-cover"
                         />
                       ) : (
                         review.name.charAt(0)
@@ -347,11 +360,19 @@ export default function LandingPagePreview({
                 </div>
               ))}
             </div>
-            {settings.reviews_source === "database" && (
-              <p className="mt-8 text-sm text-gray-500 italic">
-                * Displaying a preview of reviews. Actual student reviews from
-                the database will be shown here.
-              </p>
+            {isRealMode && (
+              <div className="mt-8">
+                {isCustomMode && settings.manual_reviews?.length ? (
+                   <p className="text-sm text-gray-500 italic">
+                     * Real student reviews (from database) will also be combined and displayed here when published.
+                   </p>
+                ) : (
+                  <p className="text-sm text-gray-500 italic">
+                    * Displaying a preview of reviews. Actual student reviews from
+                    the database will be shown here.
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </section>
@@ -390,7 +411,7 @@ export default function LandingPagePreview({
             <MessageCircle className="text-blue-600" size={32} />
             <h3 className="font-bold text-xl">Still have questions?</h3>
             <p className="text-gray-500">
-              We're here to help you make the right choice for your career.
+              We&apos;re here to help you make the right choice for your career.
             </p>
             <button className="text-blue-600 font-bold hover:underline">
               Contact Support

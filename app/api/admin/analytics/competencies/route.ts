@@ -9,13 +9,16 @@ import { authOptions } from "@/lib/auth-options";
 import { createClient } from "@supabase/supabase-js";
 import { CompetencyData } from "@/lib/analytics/types";
 
-// Create Supabase client with service role for admin access
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  // Create Supabase client with service role for admin access inside the handler
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
+
   try {
     // 1. Verify admin access
     const session = await getServerSession(authOptions);

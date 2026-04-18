@@ -370,3 +370,33 @@ export async function deleteLandingPageHero(
 ): Promise<{ success: boolean; error?: string }> {
   return await StorageService.deleteFile("course-thumbnails", path);
 }
+
+export async function uploadLandingPageReviewAvatar(
+  courseId: string,
+  file: File,
+): Promise<UploadResult> {
+  if (
+    !StorageService.validateFileType(file, [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ])
+  ) {
+    return {
+      success: false,
+      error: "Invalid file type. Only JPEG, PNG, and WebP are allowed.",
+    };
+  }
+
+  if (!StorageService.validateFileSize(file, 2)) {
+    return { success: false, error: "File size must be less than 2MB." };
+  }
+
+  const path = `courses/${courseId}/reviews/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+  return await StorageService.uploadFile({
+    bucket: "course-thumbnails",
+    file,
+    path,
+    upsert: true,
+  });
+}

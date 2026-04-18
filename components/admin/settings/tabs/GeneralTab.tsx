@@ -9,11 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 
 interface GeneralTabProps {
   settings: Partial<PlatformSettings>;
-  updateSetting: (key: keyof PlatformSettings, value: any) => void;
+  updateSetting: (key: keyof PlatformSettings, value: unknown) => void;
 }
 
 export function GeneralTab({ settings, updateSetting }: GeneralTabProps) {
@@ -72,18 +71,6 @@ export function GeneralTab({ settings, updateSetting }: GeneralTabProps) {
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="platform_url">Platform URL *</Label>
-            <Input
-              id="platform_url"
-              value={settings.platform_url || ""}
-              onChange={(e) => updateSetting("platform_url", e.target.value)}
-              placeholder="https://example.com"
-            />
-            <p className="text-xs text-muted-foreground">
-              Used for email links and sharing.
-            </p>
-          </div>
 
 
         </CardContent>

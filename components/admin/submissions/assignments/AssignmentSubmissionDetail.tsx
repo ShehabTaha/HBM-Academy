@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { AssignmentSubmission } from "@/types/assignment-submission-types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Check, X, FileText, Download } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 interface AssignmentSubmissionDetailProps {
   submission: AssignmentSubmission;
@@ -167,16 +167,12 @@ export default function AssignmentSubmissionDetail({
 
           <div className="grid gap-2">
             <Label htmlFor="feedback">Instructor Feedback</Label>
-            <Textarea
-              id="feedback"
-              placeholder="Provide detailed feedback for the student..."
+            <RichTextEditor
               value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              className="min-h-[150px]"
+              onChange={setFeedback}
+              placeholder="Provide detailed feedback for the student..."
+              minHeight={150}
             />
-            <p className="text-xs text-muted-foreground text-right">
-              {feedback.length}/500 characters
-            </p>
           </div>
 
           <div className="flex items-center space-x-2">

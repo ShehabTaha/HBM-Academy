@@ -101,6 +101,34 @@ export function useLandingPageAPI(courseId: string) {
     [courseId],
   );
 
+  const uploadReviewAvatar = useCallback(
+    async (file: File) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const response = await fetch(
+          `/api/courses/${courseId}/landing-page/upload-review-avatar`,
+          {
+            method: "POST",
+            body: formData,
+          },
+        );
+        const data = await response.json();
+        if (!response.ok)
+          throw new Error(data.error || "Failed to upload image");
+        return { url: data.url, path: data.path };
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [courseId],
+  );
+
   return {
     loading,
     error,
@@ -108,5 +136,6 @@ export function useLandingPageAPI(courseId: string) {
     saveSettings,
     uploadHeroImage,
     deleteHeroImage,
+    uploadReviewAvatar,
   };
 }

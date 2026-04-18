@@ -7,13 +7,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/security/requireAdmin";
 import { createClient } from "@supabase/supabase-js";
 
-// Use service role key to bypass RLS for admin analytics
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  // Use service role key to bypass RLS for admin analytics inside the handler
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
+
   try {
     // SECURITY: Verify admin access
     const { error: authError } = await requireAdmin();

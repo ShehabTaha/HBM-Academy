@@ -128,5 +128,6 @@ export function useLandingPageEditor(courseId: string) {
     discard,
     uploadHeroImage: api.uploadHeroImage,
     deleteHeroImage: api.deleteHeroImage,
+    uploadReviewAvatar: api.uploadReviewAvatar,
   };
 }
