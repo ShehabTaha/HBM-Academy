@@ -12,6 +12,7 @@ import { EmailChangeDialog } from "../EmailChangeDialog";
 import { AvatarCropModal } from "../AvatarCropModal";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import Image from "next/image";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ProfileSectionProps {
   user: User;
@@ -20,6 +21,7 @@ interface ProfileSectionProps {
 
 export default function ProfileSection({ user, refresh }: ProfileSectionProps) {
   const { isUpdating, updateBasicInfo, updateAvatar } = useProfileUpdate();
+  const { toast } = useToast();
   
   const savedData = React.useMemo(() => ({
     name: user.name,
