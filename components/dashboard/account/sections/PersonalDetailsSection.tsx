@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { UserProfile } from "@/types/account";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +29,8 @@ export default function PersonalDetailsSection({
   refresh,
 }: PersonalDetailsSectionProps) {
   const [isUpdating, setIsUpdating] = useState(false);
-  const [formData, setFormData] = useState({
+  
+  const savedData = useMemo(() => ({
     phone: profile?.phone || "",
     date_of_birth: profile?.date_of_birth || "",
     location: profile?.location || "",
@@ -43,7 +45,12 @@ export default function PersonalDetailsSection({
       twitter: profile?.social_links?.twitter || "",
       github: profile?.social_links?.github || "",
     },
-  });
+  }), [profile]);
+
+  const { draftData: formData, setDraft: setFormData, isDirty, clearDraft } = useUnsavedChanges(
+    "personal-details",
+    savedData
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +73,7 @@ export default function PersonalDetailsSection({
         title: "Success",
         description: "Personal details updated successfully.",
       });
+      clearDraft();
       refresh();
     } catch (error: any) {
       toast({
@@ -268,10 +276,10 @@ export default function PersonalDetailsSection({
         </div>
 
         <div className="pt-6 border-t border-gray-100 flex justify-end space-x-4">
-          <Button type="button" variant="ghost" onClick={() => refresh()}>
+          <Button type="button" variant="ghost" onClick={clearDraft} disabled={!isDirty}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isUpdating}>
+          <Button type="submit" disabled={isUpdating || !isDirty}>
             {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Changes
           </Button>

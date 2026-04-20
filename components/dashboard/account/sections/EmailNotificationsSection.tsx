@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { User, UserProfile } from "@/types/account";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAdminNotificationSettings } from "@/hooks/account/useAdminNotificationSettings";
+import { useOTPVerification } from "@/hooks/useOTPVerification";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -42,13 +44,10 @@ export default function EmailNotificationsSection({
   const {
     settings,
     isLoading,
-    isSaving,
     isSendingTest,
     updateSettings,
     sendTestNotification,
   } = useAdminNotificationSettings();
-
-  const [newEmail, setNewEmail] = useState("");
 
   const handleFrequencyChange = (
     key: keyof typeof settings.preferences,
@@ -63,15 +62,14 @@ export default function EmailNotificationsSection({
     });
   };
 
-  const handleAddEmail = () => {
-    if (!newEmail || !newEmail.includes("@")) return;
-    if (settings.recipient_emails.includes(newEmail)) return;
+  const handleAddEmail = (email: string) => {
+    if (!email || !email.includes("@")) return;
+    if (settings.recipient_emails.includes(email)) return;
 
     updateSettings({
       ...settings,
-      recipient_emails: [...settings.recipient_emails, newEmail],
+      recipient_emails: [...settings.recipient_emails, email],
     });
-    setNewEmail("");
   };
 
   const handleRemoveEmail = (email: string) => {
@@ -155,17 +153,7 @@ export default function EmailNotificationsSection({
               ))}
             </div>
 
-            <div className="flex gap-2 max-w-md">
-              <Input
-                placeholder="Add another recipient email"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddEmail()}
-              />
-              <Button onClick={handleAddEmail} variant="outline" size="icon">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
+            <NotificationEmailOTPForm onAdd={handleAddEmail} />
           </CardContent>
         </Card>
 
@@ -320,6 +308,129 @@ export default function EmailNotificationsSection({
           Auto-Saved
         </Button>
       </div>
+    </div>
+  );
+}
+
+function NotificationEmailOTPForm({ onAdd }: { onAdd: (email: string) => void }) {
+  const [newEmail, setNewEmail] = useState("");
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const {
+    step,
+    digits,
+    updateDigit,
+    isOTPComplete,
+    isLoading,
+    error,
+    isLocked,
+    isExpired,
+    sendOTP,
+    verifyOTP,
+    reset,
+  } = useOTPVerification({
+    purpose: "notification_add",
+    onSuccess: () => {
+      onAdd(newEmail);
+      reset();
+      setNewEmail("");
+    },
+  });
+
+  const handleDigitKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    index: number
+  ) => {
+    if (e.key === "Backspace") {
+      if (digits[index] === "" && index > 0) {
+        inputRefs.current[index - 1]?.focus();
+      }
+    }
+    if (e.key === "ArrowLeft" && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+    if (e.key === "ArrowRight" && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+    if (e.key === "Enter" && isOTPComplete && !isLocked && !isExpired) {
+      verifyOTP();
+    }
+  };
+
+  const handleDigitChange = (value: string, index: number) => {
+    // Handle paste
+    if (value.length > 1) {
+      const pastedDigits = value.replace(/\D/g, "").slice(0, 6).split("");
+      pastedDigits.forEach((d, i) => {
+        if (index + i < 6) updateDigit(index + i, d);
+      });
+      const nextFocus = Math.min(index + pastedDigits.length, 5);
+      inputRefs.current[nextFocus]?.focus();
+      return;
+    }
+    updateDigit(index, value);
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  if (step === "otp") {
+    return (
+      <div className="space-y-4 p-5 bg-gray-50 border border-gray-100 rounded-xl max-w-md">
+        <p className="text-sm font-medium text-gray-700">Enter the 6-digit verification code sent to {newEmail}</p>
+        <div className="flex gap-2 justify-start">
+          {digits.map((digit, i) => (
+            <input
+              key={i}
+              ref={(el) => { inputRefs.current[i] = el; }}
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={digit}
+              onChange={(e) => handleDigitChange(e.target.value, i)}
+              onKeyDown={(e) => handleDigitKeyDown(e, i)}
+              disabled={isLocked || isExpired || isLoading}
+              className={cn(
+                "w-10 h-12 text-center text-lg font-bold border-2 rounded-lg outline-none transition-all",
+                "focus:border-blue-500 focus:ring-2 focus:ring-blue-100",
+                digit
+                  ? "border-blue-400 bg-blue-50 text-blue-700"
+                  : "border-gray-200 bg-white text-gray-900",
+                (isLocked || isExpired) &&
+                  "opacity-50 cursor-not-allowed border-gray-100 bg-gray-50"
+              )}
+            />
+          ))}
+        </div>
+        {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
+        <div className="flex gap-3 pt-2">
+          <Button variant="outline" size="sm" className="flex-1" onClick={() => { reset(); setNewEmail(""); }} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button size="sm" className="flex-1" onClick={verifyOTP} disabled={!isOTPComplete || isLocked || isExpired || isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Verify & Add
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 max-w-md">
+      <div className="flex gap-2">
+        <Input
+          placeholder="Add another recipient email"
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
+          disabled={isLoading}
+          onKeyDown={(e) => e.key === "Enter" && sendOTP(newEmail)}
+        />
+        <Button onClick={() => sendOTP(newEmail)} variant="outline" size="icon" disabled={isLoading || !newEmail}>
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+        </Button>
+      </div>
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );
 }

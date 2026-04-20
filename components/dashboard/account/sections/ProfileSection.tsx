@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EmailChangeDialog } from "../EmailChangeDialog";
+import { AvatarCropModal } from "../AvatarCropModal";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import Image from "next/image";
 
 interface ProfileSectionProps {
@@ -18,24 +20,58 @@ interface ProfileSectionProps {
 
 export default function ProfileSection({ user, refresh }: ProfileSectionProps) {
   const { isUpdating, updateBasicInfo, updateAvatar } = useProfileUpdate();
-  const [formData, setFormData] = useState({
+  
+  const savedData = React.useMemo(() => ({
     name: user.name,
     bio: user.bio || "",
-  });
-  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  }), [user.name, user.bio]);
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const { draftData: formData, setDraft: setFormData, isDirty, clearDraft } = useUnsavedChanges(
+    "profile",
+    savedData
+  );
+
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const result = await updateAvatar(user.id, file);
-      if (result.success) refresh();
+      const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+      if (!validTypes.includes(file.type)) {
+        toast({ title: "Error", description: "Unsupported file type.", variant: "destructive" });
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ title: "Error", description: "File size must be under 5MB.", variant: "destructive" });
+        return;
+      }
+      setSelectedImageFile(file);
+      setIsCropModalOpen(true);
+    }
+  };
+
+  const handleSaveCroppedAvatar = async (croppedBlob: Blob) => {
+    // Generate a file from the blob to keep the updateAvatar API simple, or adjust the hook
+    const file = new File([croppedBlob], `avatar-${Date.now()}.webp`, {
+      type: "image/webp",
+    });
+    const result = await updateAvatar(user.id, file);
+    if (result.success) {
+      setIsCropModalOpen(false);
+      setSelectedImageFile(null);
+      refresh();
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const result = await updateBasicInfo(user.id, formData);
-    if (result.success) refresh();
+    if (result.success) {
+      clearDraft();
+      refresh();
+    }
   };
 
   return (
@@ -182,13 +218,12 @@ export default function ProfileSection({ user, refresh }: ProfileSectionProps) {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() =>
-                  setFormData({ name: user.name, bio: user.bio || "" })
-                }
+                onClick={clearDraft}
+                disabled={!isDirty}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isUpdating}>
+              <Button type="submit" disabled={isUpdating || !isDirty}>
                 {isUpdating && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
@@ -204,6 +239,16 @@ export default function ProfileSection({ user, refresh }: ProfileSectionProps) {
         isOpen={isEmailDialogOpen}
         onOpenChange={setIsEmailDialogOpen}
         onSuccess={refresh}
+      />
+      
+      <AvatarCropModal
+        isOpen={isCropModalOpen}
+        imageFile={selectedImageFile}
+        onSave={handleSaveCroppedAvatar}
+        onCancel={() => {
+          setIsCropModalOpen(false);
+          setSelectedImageFile(null);
+        }}
       />
     </div>
   );

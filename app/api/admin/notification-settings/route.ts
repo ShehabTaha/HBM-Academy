@@ -11,16 +11,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || (session.user as any).role !== "admin") {
+  if (!session || !session.user || (session.user as { role?: string }).role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { data, error } = await supabase
     .from("admin_notification_settings")
     .select("*")
-    .eq("admin_user_id", (session.user as any).id)
+    .eq("admin_user_id", (session.user as { id?: string }).id)
     .single();
 
   if (error && error.code !== "PGRST116") {
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || (session.user as any).role !== "admin") {
+  if (!session || !session.user || (session.user as { role?: string }).role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -56,7 +56,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const { recipient_emails, preferences } = validation.data;
-    const userId = (session.user as any).id;
+    const userId = (session.user as { id?: string }).id;
 
     // Upsert settings
     const { data, error } = await supabase
@@ -79,6 +79,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json(data);
   } catch (err) {
+    console.error("[notification-settings] PUT error:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },

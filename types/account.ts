@@ -47,11 +47,16 @@ export interface UserProfile {
 export interface UserSession {
   id: string;
   user_id: string;
+  session_token?: string | null;
   device_name: string;
   device_type: "desktop" | "mobile" | "tablet";
   browser: string;
   ip_address: string;
-  country: string;
+  country: string | null;
+  city: string | null;
+  is_current: boolean;
+  status: "active" | "inactive";
+  duration: string | null;
   last_activity: string;
   created_at: string;
   expires_at: string;

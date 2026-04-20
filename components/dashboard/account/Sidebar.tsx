@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useUnsavedChangesContext } from "@/contexts/UnsavedChangesContext";
 
 interface SidebarProps {
   user: User;
@@ -42,6 +43,8 @@ export default function Sidebar({
   onSectionChange,
 }: SidebarProps) {
   const router = useRouter();
+  const { hasDraft, anyDirty, setPendingNav, clearAllDrafts } =
+    useUnsavedChangesContext();
   return (
     <aside className="lg:col-span-3 mb-8 lg:mb-0">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-8">
@@ -84,18 +87,32 @@ export default function Sidebar({
                 />
                 {item.label}
               </div>
-              {activeSection === item.id && (
-                <ChevronRight className="h-4 w-4" />
-              )}
+              <div className="flex items-center gap-2">
+                {hasDraft(item.id) && (
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                )}
+                {activeSection === item.id && (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </div>
             </button>
           ))}
 
           <button
-            onClick={async () => {
-              console.log("[Sidebar] Logout button clicked");
-              await signOut({ redirect: false });
-              console.log("[Sidebar] SignOut completed, now redirecting...");
-              router.push("/auth/login");
+            onClick={() => {
+              const doLogout = async () => {
+                clearAllDrafts();
+                console.log("[Sidebar] Logout button clicked");
+                await signOut({ redirect: false });
+                console.log("[Sidebar] SignOut completed, now redirecting...");
+                router.push("/auth/login");
+              };
+              
+              if (anyDirty) {
+                setPendingNav(() => doLogout);
+              } else {
+                doLogout();
+              }
             }}
             className="w-full flex items-center px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors mt-6"
           >

@@ -11,10 +11,17 @@ import SessionsSection from "@/components/dashboard/account/sections/SessionsSec
 import DataPrivacySection from "@/components/dashboard/account/sections/DataPrivacySection";
 import { AccountSection } from "@/types/account";
 import { Loader2 } from "lucide-react";
+import { useNavigationGuard } from "@/hooks/useNavigationGuard";
+import { UnsavedChangesModal } from "@/components/dashboard/account/UnsavedChangesModal";
+import { useUnsavedChangesContext } from "@/contexts/UnsavedChangesContext";
 
 export default function AccountPage() {
   const { user, profile, loading, refresh } = useUserProfile();
   const [activeSection, setActiveSection] = useState<AccountSection>("profile");
+
+  const { guardedSectionChange } = useNavigationGuard();
+  const { pendingNav, setPendingNav, clearAllDrafts } =
+    useUnsavedChangesContext();
 
   if (loading) {
     return (
@@ -63,7 +70,9 @@ export default function AccountPage() {
         <Sidebar
           user={user}
           activeSection={activeSection}
-          onSectionChange={setActiveSection}
+          onSectionChange={(section: AccountSection) =>
+            guardedSectionChange(section, setActiveSection)
+          }
         />
 
         <div className="lg:col-span-9">
@@ -72,6 +81,16 @@ export default function AccountPage() {
           </div>
         </div>
       </div>
+      
+      <UnsavedChangesModal
+        open={pendingNav !== null}
+        onStay={() => setPendingNav(null)}
+        onLeave={() => {
+          clearAllDrafts();
+          if (pendingNav) pendingNav();
+          setPendingNav(null);
+        }}
+      />
     </div>
   );
 }
