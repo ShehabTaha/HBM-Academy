@@ -17,7 +17,8 @@ function formatDuration(createdAt: string, lastActivity: string, isCurrent: bool
 
 function deriveStatus(lastActivity: string): "active" | "inactive" {
   const diff = Date.now() - new Date(lastActivity).getTime();
-  return diff < 30 * 60 * 1000 ? "active" : "inactive";
+  // With a 5-minute heartbeat, a session is inactive if not seen in 10 minutes
+  return diff < 10 * 60 * 1000 ? "active" : "inactive";
 }
 
 export async function GET() {
@@ -57,7 +58,7 @@ export async function GET() {
     }
 
     // Mark current session by matching token stored in session
-    const currentToken = (session as any).sessionToken ?? null;
+    const currentToken = (session as any)?.user?.sessionToken ?? null;
 
     const enrichedSessions = (rawSessions ?? []).map((s: any) => {
       const isCurrent =

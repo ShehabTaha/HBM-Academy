@@ -30,7 +30,8 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
+import { useSessionHeartbeat } from "@/hooks/account/useSessionHeartbeat";
 
 const menuItems = [
   { name: "Home", icon: Home, href: "/dashboard/home" },
@@ -84,7 +85,20 @@ function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
+  const { data: session } = useSession();
+
   const handleLogout = async () => {
+    try {
+      if ((session?.user as any)?.sessionId) {
+        await fetch("/api/user/sessions/revoke", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: (session?.user as any)?.sessionId }),
+        });
+      }
+    } catch (e) {
+      console.error("Failed to revoke session on logout", e);
+    }
     await signOut({ redirect: false });
     router.push("/auth/login");
   };
@@ -254,6 +268,8 @@ export default function SidebarShell({
 }: {
   children: React.ReactNode;
 }) {
+  useSessionHeartbeat();
+
   return (
     <SidebarProvider className="h-screen">
       <div className="flex">

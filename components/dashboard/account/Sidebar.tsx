@@ -13,7 +13,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useUnsavedChangesContext } from "@/contexts/UnsavedChangesContext";
@@ -45,6 +45,8 @@ export default function Sidebar({
   const router = useRouter();
   const { hasDraft, anyDirty, setPendingNav, clearAllDrafts } =
     useUnsavedChangesContext();
+  const { data: session } = useSession();
+
   return (
     <aside className="lg:col-span-3 mb-8 lg:mb-0">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-8">
@@ -103,6 +105,17 @@ export default function Sidebar({
               const doLogout = async () => {
                 clearAllDrafts();
                 console.log("[Sidebar] Logout button clicked");
+                try {
+                  if ((session?.user as any)?.sessionId) {
+                    await fetch("/api/user/sessions/revoke", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ sessionId: (session?.user as any)?.sessionId }),
+                    });
+                  }
+                } catch (e) {
+                  console.error("Failed to revoke session on logout", e);
+                }
                 await signOut({ redirect: false });
                 console.log("[Sidebar] SignOut completed, now redirecting...");
                 router.push("/auth/login");

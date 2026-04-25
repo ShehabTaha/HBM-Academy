@@ -81,20 +81,37 @@ export const authOptions: NextAuthOptions = {
 
           // E. Create Session Record
           const userAgent = req?.headers?.["user-agent"] || "Unknown Device";
-          const ip = req?.headers?.["x-forwarded-for"] || "Unknown IP";
-          // Simple device parsing
+          const ip =
+            (req?.headers?.["x-forwarded-for"] as string)?.split(",")[0] ||
+            "Unknown IP";
+
+          // Simple device/browser parsing
           const isMobile = /mobile/i.test(userAgent);
-          const deviceInfo = isMobile ? "Mobile Device" : "Desktop";
-          const location = "Unknown Location"; // Requires IP geolocation service
+          const isTablet = /tablet|ipad/i.test(userAgent);
+          const deviceType: "desktop" | "mobile" | "tablet" = isTablet
+            ? "tablet"
+            : isMobile
+              ? "mobile"
+              : "desktop";
+
+          let browser = "Unknown Browser";
+          if (userAgent.includes("Firefox")) browser = "Firefox";
+          else if (userAgent.includes("Chrome")) browser = "Chrome";
+          else if (userAgent.includes("Safari")) browser = "Safari";
+          else if (userAgent.includes("Edge")) browser = "Edge";
+
+          const deviceName = isMobile ? "Mobile Device" : "Desktop PC";
+          const sessionToken = crypto.randomUUID();
 
           const { data: sessionData, error: sessionError } = await supabase
             .from("user_sessions")
             .insert({
               user_id: user.id,
+              session_token: sessionToken,
               ip_address: ip,
-              user_agent: userAgent,
-              device_info: deviceInfo,
-              location: location,
+              device_name: deviceName,
+              device_type: deviceType,
+              browser: browser,
               last_activity: new Date().toISOString(),
             })
             .select("id")
@@ -105,9 +122,6 @@ export const authOptions: NextAuthOptions = {
               "[Auth] Failed to create session record:",
               sessionError,
             );
-            // Verify if table exists, if not, proceed without session tracking (graceful degradation) but log it.
-            // If we really want to enforce sessions, we should fail here.
-            // But for now, let's proceed but maybe without sessionId.
           }
 
           // Handle loose column naming (is_email_verified vs isemailverified)
@@ -121,6 +135,7 @@ export const authOptions: NextAuthOptions = {
             role: user.role,
             isEmailVerified: isVerified,
             image: user.avatar,
+            sessionToken: sessionToken,
             sessionId: sessionData?.id,
           } as any;
         } catch (err) {
@@ -149,18 +164,15 @@ export const authOptions: NextAuthOptions = {
       }
       return true; // Allow sign in
     },
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.isEmailVerified = user.isEmailVerified;
         // @ts-ignore
+        token.sessionToken = user.sessionToken;
+        // @ts-ignore
         token.sessionId = user.sessionId;
-      }
-
-      // Update last activity on session update?
-      if (trigger === "update" && token.sessionId) {
-        // Could update DB here
       }
 
       return token;
@@ -170,6 +182,8 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.role = token.role as any;
         session.user.isEmailVerified = token.isEmailVerified as boolean;
+        // @ts-ignore
+        session.user.sessionToken = token.sessionToken as string;
         // @ts-ignore
         session.user.sessionId = token.sessionId as string;
       }

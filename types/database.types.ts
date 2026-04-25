@@ -39,6 +39,8 @@ export interface Database {
           created_at: string;
           updated_at: string;
           deleted_at: string | null;
+          /** Timestamp of the last successful explicit password change. */
+          password_changed_at: string | null;
         };
         Insert: {
           id?: string;
@@ -52,6 +54,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
+          password_changed_at?: string | null;
         };
         Update: {
           id?: string;
@@ -65,6 +68,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
           deleted_at?: string | null;
+          password_changed_at?: string | null;
         };
       };
       courses: {
