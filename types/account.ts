@@ -51,6 +51,7 @@ export interface UserSession {
   device_name: string;
   device_type: "desktop" | "mobile" | "tablet";
   browser: string;
+  os: string | null;
   ip_address: string;
   country: string | null;
   city: string | null;

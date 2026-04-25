@@ -12,7 +12,11 @@ declare module "next-auth" {
       email: string;
       name: string;
       avatar?: string;
-      isEmailVerified?: boolean;
+      isEmailVerified: boolean;
+      /** Custom token stored in user_sessions table; used to match current session */
+      sessionToken: string | null;
+      /** Row ID in user_sessions for the current device's session */
+      sessionId: string | null;
     } & DefaultSession["user"];
   }
 
@@ -23,7 +27,11 @@ declare module "next-auth" {
     id: string;
     role: "student" | "admin" | "lecturer";
     avatar?: string;
-    isEmailVerified?: boolean;
+    isEmailVerified: boolean;
+    /** Custom token stored in user_sessions table; used to match current session */
+    sessionToken: string | null;
+    /** Row ID in user_sessions for the current device's session */
+    sessionId: string | null;
   }
 }
 
@@ -34,6 +42,10 @@ declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id: string;
     role: "student" | "admin" | "lecturer";
-    isEmailVerified?: boolean;
+    isEmailVerified: boolean;
+    /** Custom token stored in user_sessions table; used to match current session */
+    sessionToken: string | null;
+    /** Row ID in user_sessions for the current device's session */
+    sessionId: string | null;
   }
 }

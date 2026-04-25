@@ -7,11 +7,17 @@ export async function POST() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id || !(session.user as any).sessionId) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const sessionId = (session.user as any).sessionId;
+    const sessionId = session.user.sessionId;
+
+    // If no sessionId in token (older session before tracking was added),
+    // return success silently — do NOT kick them out
+    if (!sessionId) {
+      return NextResponse.json({ success: true, skipped: true });
+    }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;

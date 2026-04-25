@@ -203,10 +203,13 @@ function SessionCard({
             <StatusBadge status={session.status} />
           </div>
 
-          {/* Browser */}
+          {/* Browser + OS */}
           <div className="flex items-center gap-1.5 text-xs text-gray-600 font-medium">
             <Globe className="h-3.5 w-3.5 text-gray-400" />
             {session.browser || "Unknown browser"}
+            {session.os && (
+              <span className="text-gray-400">&nbsp;·&nbsp;{session.os}</span>
+            )}
           </div>
 
           {/* Meta row */}

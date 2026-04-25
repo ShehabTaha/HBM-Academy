@@ -81,26 +81,34 @@ export const authOptions: NextAuthOptions = {
 
           // E. Create Session Record
           const userAgent = req?.headers?.["user-agent"] || "Unknown Device";
-          const ip =
-            (req?.headers?.["x-forwarded-for"] as string)?.split(",")[0] ||
-            "Unknown IP";
+          const rawIp = req?.headers?.["x-forwarded-for"] as string | undefined;
+          const ip = rawIp ? rawIp.split(",")[0].trim() : "Unknown IP";
 
-          // Simple device/browser parsing
-          const isMobile = /mobile/i.test(userAgent);
+          // Device type detection
           const isTablet = /tablet|ipad/i.test(userAgent);
+          const isMobile = !isTablet && /mobile/i.test(userAgent);
           const deviceType: "desktop" | "mobile" | "tablet" = isTablet
             ? "tablet"
             : isMobile
               ? "mobile"
               : "desktop";
 
+          // Browser detection — order matters: Edge > Chrome > Firefox > Safari
           let browser = "Unknown Browser";
-          if (userAgent.includes("Firefox")) browser = "Firefox";
-          else if (userAgent.includes("Chrome")) browser = "Chrome";
-          else if (userAgent.includes("Safari")) browser = "Safari";
-          else if (userAgent.includes("Edge")) browser = "Edge";
+          if (/edg\//i.test(userAgent))         browser = "Edge";
+          else if (/firefox/i.test(userAgent))  browser = "Firefox";
+          else if (/chrome/i.test(userAgent))   browser = "Chrome";
+          else if (/safari/i.test(userAgent))   browser = "Safari";
 
-          const deviceName = isMobile ? "Mobile Device" : "Desktop PC";
+          // OS detection
+          let os = "Unknown OS";
+          if (/windows/i.test(userAgent))       os = "Windows";
+          else if (/mac os x/i.test(userAgent)) os = "macOS";
+          else if (/android/i.test(userAgent))  os = "Android";
+          else if (/iphone|ipad/i.test(userAgent)) os = "iOS";
+          else if (/linux/i.test(userAgent))    os = "Linux";
+
+          const deviceName = `${browser} on ${os}`;
           const sessionToken = crypto.randomUUID();
 
           const { data: sessionData, error: sessionError } = await supabase
@@ -111,17 +119,24 @@ export const authOptions: NextAuthOptions = {
               ip_address: ip,
               device_name: deviceName,
               device_type: deviceType,
-              browser: browser,
+              browser,
+              os,
               last_activity: new Date().toISOString(),
+              expires_at: new Date(
+                Date.now() + 30 * 24 * 60 * 60 * 1000
+              ).toISOString(),
             })
             .select("id")
             .single();
 
           if (sessionError) {
+            // Log but do not fail login — session tracking is non-critical
             console.error(
               "[Auth] Failed to create session record:",
-              sessionError,
+              JSON.stringify(sessionError),
             );
+          } else {
+            console.log("[Auth] Session record created:", sessionData?.id);
           }
 
           // Handle loose column naming (is_email_verified vs isemailverified)
@@ -135,8 +150,8 @@ export const authOptions: NextAuthOptions = {
             role: user.role,
             isEmailVerified: isVerified,
             image: user.avatar,
-            sessionToken: sessionToken,
-            sessionId: sessionData?.id,
+            sessionToken,
+            sessionId: sessionData?.id ?? null,
           } as any;
         } catch (err) {
           console.error("[Auth] Critical crash in authorize:", err);
@@ -160,32 +175,31 @@ export const authOptions: NextAuthOptions = {
         console.warn(
           `[Auth] Sign-in denied for unauthorized email: ${user.email}`,
         );
-        return false; // Deny sign in
+        return false;
       }
-      return true; // Allow sign in
+      return true;
     },
+
     async jwt({ token, user }) {
+      // On initial sign-in, `user` is populated — persist into token
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.isEmailVerified = user.isEmailVerified;
-        // @ts-ignore
         token.sessionToken = user.sessionToken;
-        // @ts-ignore
         token.sessionId = user.sessionId;
       }
-
+      // On subsequent requests, token already has these values — just return it
       return token;
     },
+
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as any;
-        session.user.isEmailVerified = token.isEmailVerified as boolean;
-        // @ts-ignore
-        session.user.sessionToken = token.sessionToken as string;
-        // @ts-ignore
-        session.user.sessionId = token.sessionId as string;
+        session.user.id              = token.id;
+        session.user.role            = token.role;
+        session.user.isEmailVerified = token.isEmailVerified;
+        session.user.sessionToken    = token.sessionToken;
+        session.user.sessionId       = token.sessionId;
       }
       return session;
     },

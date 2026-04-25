@@ -38,7 +38,7 @@ export async function POST(req: Request) {
         .from("user_sessions")
         .delete()
         .eq("user_id", session.user.id)
-        .neq("id", (session.user as any).sessionId); // Don't delete current session
+        .neq("id", session.user.sessionId ?? ""); // Don't delete current session
 
       if (error) {
         if (error.code === "PGRST205" || error.code === "42P01") {
