@@ -14,6 +14,7 @@
     "inventory": "tsx scripts/route-inventory.ts"
   },
   "dependencies": {
+    "@babel/runtime": "^7.29.2",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -32,6 +33,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@stripe/stripe-js": "^9.3.1",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.84.0",
     "@tanstack/react-table": "^8.21.3",
@@ -40,6 +42,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.24",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.552.0",
     "next": "^16.1.6",
     "next-auth": "^4.24.13",
@@ -50,6 +53,7 @@
     "react-hook-form": "^7.71.1",
     "react-image-crop": "^11.0.10",
     "recharts": "^3.7.0",
+    "stripe": "^22.1.0",
     "swr": "^2.3.8",
     "tailwind-merge": "^3.3.1",
     "zod": "^4.1.12"

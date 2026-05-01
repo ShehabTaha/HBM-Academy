@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from "@/lib/supabase/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database.types";
+import { jsPDF } from "jspdf";
 
 type Certificate = Database["public"]["Tables"]["certificates"]["Row"];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -55,7 +57,6 @@ export class CertificateService {
         return { error: enrollmentError.message };
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const enrollment = enrollmentRaw as any;
 
       // Check if enrollment is completed
@@ -71,7 +72,6 @@ export class CertificateService {
         .eq("enrollment_id", enrollmentId)
         .single();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const existing = existingRaw as any;
 
       if (existing) {
@@ -98,12 +98,46 @@ export class CertificateService {
         return { error: error.message };
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const certificate = certificateRaw as any;
 
-      // TODO: Generate actual PDF certificate and upload to storage
-      // For now, we'll just create the database record
-      // You can implement PDF generation using libraries like jsPDF or pdfmake
+      // Generate actual PDF certificate
+      const doc = new jsPDF("landscape");
+      doc.setFontSize(26);
+      doc.text("Certificate of Completion", 148.5, 60, { align: "center" });
+      doc.setFontSize(18);
+      doc.text(`Awarded to: ${enrollment.student?.name || enrollment.student?.email || "Student"}`, 148.5, 90, { align: "center" });
+      doc.text(`For successfully completing the course:`, 148.5, 110, { align: "center" });
+      doc.setFontSize(22);
+      doc.text(enrollment.course?.title || "Course", 148.5, 130, { align: "center" });
+      doc.setFontSize(12);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, 148.5, 160, { align: "center" });
+      doc.text(`Certificate No: ${certificateNumber}`, 148.5, 170, { align: "center" });
+
+      const pdfArrayBuffer = doc.output("arraybuffer");
+      const fileName = `${enrollmentId}_${certificateNumber}.pdf`;
+
+      const { error: uploadError } = await admin.storage
+        .from("certificates")
+        .upload(fileName, pdfArrayBuffer, {
+          contentType: "application/pdf",
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error("Failed to upload PDF:", uploadError);
+      } else {
+        const { data: publicUrlData } = admin.storage
+          .from("certificates")
+          .getPublicUrl(fileName);
+        
+        const certificateUrl = publicUrlData.publicUrl;
+        
+        await (admin.from("certificates") as any)
+          .update({ certificate_url: certificateUrl })
+          .eq("id", certificate.id);
+          
+        certificate.certificate_url = certificateUrl;
+      }
 
       return { certificate };
     } catch (error) {
@@ -137,7 +171,6 @@ export class CertificateService {
         return { error: error.message };
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const certificate = certificateRaw as any;
 
       return { certificate };
@@ -183,7 +216,6 @@ export class CertificateService {
         return { certificates: [], error: error.message };
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return { certificates: (data as any) || [] };
     } catch (error) {
       return {
@@ -202,7 +234,6 @@ export class CertificateService {
   static async verifyCertificate(certificateNumber: string): Promise<{
     valid: boolean;
     certificate?: Certificate & {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       enrollment: any;
     };
     error?: string;
@@ -245,7 +276,6 @@ export class CertificateService {
         return { valid: false, error: error.message };
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const certificate = certificateRaw as any;
 
       return {
@@ -285,7 +315,6 @@ export class CertificateService {
         return { error: error.message };
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const certificate = certificateRaw as any;
 
       return { certificate };
@@ -320,7 +349,6 @@ export class CertificateService {
         return { error: error.message };
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const certificate = certificateRaw as any;
 
       return { certificate: certificate || undefined };

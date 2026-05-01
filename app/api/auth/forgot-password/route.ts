@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
 import { generateTokenWithExpiry } from "@/lib/auth-utils";
-// import { sendPasswordResetEmail } from "@/lib/email"; // TODO: Implement email service
+import { triggerEmail } from "@/lib/services/email.service";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -63,9 +63,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // TODO: Send email with reset link
-    // const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`;
-    // await sendPasswordResetEmail(user.email, resetUrl);
+    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password?token=${token}`;
+    
+    await triggerEmail({
+      event: "password_reset",
+      to: user.email,
+      variables: {
+        reset_url: resetUrl,
+        user_name: user.name || "User"
+      },
+      userId: user.id
+    });
 
     console.log("Password reset token:", token); // For development
 

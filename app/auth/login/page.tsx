@@ -25,6 +25,7 @@ export default function LoginPage() {
                 alt="HBM Academy Logo"
                 fill
                 className="object-contain"
+                style={{ width: "auto", height: "auto" }}
               />
             </div>
             <span>HBM Academy</span>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/security/requireAdmin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/services/email.service";
 
 export async function POST(
   request: NextRequest,
@@ -12,14 +13,14 @@ export async function POST(
 
     const { submissionId } = await params;
     const body = await request.json();
-    const { feedback, sendEmail } = body;
+    const { feedback, sendEmail: shouldSendEmail } = body;
 
     const supabase = createAdminClient();
 
     // 2. Update Status
     const { error: updateError } = await supabase
       .from("assignment_submissions")
-      // @ts-ignore
+      // @ts-expect-error - Expected type mismatch for status
       .update({
         status: "rejected",
         admin_feedback: feedback,
@@ -34,12 +35,13 @@ export async function POST(
 
     // 3. Ensure Progress is Incomplete (optional, but good for consistency)
     // We fetch details to finding enrollment
-    const { data: submissionData } = await supabase
-      .from("assignment_submissions" as any)
-      .select("student_id, course_id, assignment_id")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: submissionData } = await (supabase.from("assignment_submissions") as any)
+      .select("*, student:users(email)")
       .eq("id", submissionId)
       .single();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const submission = submissionData as any;
 
     if (submission) {
@@ -50,26 +52,33 @@ export async function POST(
         .eq("course_id", submission.course_id)
         .single();
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const enrollment = enrollmentData as any;
 
       if (enrollment) {
         await supabase
           .from("progress")
-          // @ts-ignore
+          // @ts-expect-error - Expected type mismatch for status
           .update({ is_completed: false })
           .eq("enrollment_id", enrollment.id)
           .eq("lesson_id", submission.assignment_id);
       }
     }
 
-    // 4. Send Email (Mock)
-    if (sendEmail) {
-      console.log(`Sending rejection email`);
+    // 4. Send Email
+    if (shouldSendEmail) {
+      const studentEmail = submission?.student?.email || "student@example.com";
+      await sendEmail({
+        to: studentEmail,
+        subject: "Your Assignment Needs Revisions",
+        html: `<p>Your assignment was reviewed but needs some changes.</p><p><strong>Feedback:</strong> ${feedback || "Please revise and resubmit."}</p>`,
+      });
+      console.log(`Sending rejection email to ${studentEmail}`);
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error rejecting submission:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

@@ -440,6 +440,7 @@ export default function LandingPagePreview({
           width={150}
           height={40}
           className="object-contain"
+          style={{ width: "auto", height: "auto" }}
         />
         <p className="text-xs text-gray-400">
           © 2026 HBM Academy. All rights reserved.

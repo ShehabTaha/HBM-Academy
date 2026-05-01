@@ -4,7 +4,8 @@ import { useState, useRef } from "react";
 import { User, UserProfile } from "@/types/account";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2, BellRing, Plus, X, Send, Save } from "lucide-react";
+import { Loader2, BellRing, Plus, X, Send, Save, CheckCircle2, Trash2 } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 import {
   Card,
   CardContent,
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAdminNotificationSettings } from "@/hooks/account/useAdminNotificationSettings";
+import { useUserEmails } from "@/hooks/account/useUserEmails";
 import { useOTPVerification } from "@/hooks/useOTPVerification";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -43,11 +45,19 @@ export default function EmailNotificationsSection({
 }: EmailNotificationsSectionProps) {
   const {
     settings,
-    isLoading,
+    isLoading: isSettingsLoading,
     isSendingTest,
     updateSettings,
     sendTestNotification,
   } = useAdminNotificationSettings();
+
+  const {
+    emails: userEmails,
+    isLoading: isEmailsLoading,
+    addEmail,
+    makePrimary,
+    deleteEmail,
+  } = useUserEmails();
 
   const handleFrequencyChange = (
     key: keyof typeof settings.preferences,
@@ -62,24 +72,22 @@ export default function EmailNotificationsSection({
     });
   };
 
-  const handleAddEmail = (email: string) => {
+  const handleAddEmail = async (email: string) => {
     if (!email || !email.includes("@")) return;
-    if (settings.recipient_emails.includes(email)) return;
-
-    updateSettings({
-      ...settings,
-      recipient_emails: [...settings.recipient_emails, email],
-    });
+    await addEmail(email);
   };
 
-  const handleRemoveEmail = (email: string) => {
-    updateSettings({
-      ...settings,
-      recipient_emails: settings.recipient_emails.filter((e) => e !== email),
-    });
+  const handleDeleteEmail = async (id: string, isPrimary: boolean) => {
+    if (isPrimary && userEmails.length === 1) {
+      toast({ title: "Error", description: "You cannot delete your only email address.", variant: "destructive" });
+      return;
+    }
+    if (confirm("Are you sure you want to delete this email address?")) {
+      await deleteEmail(id);
+    }
   };
 
-  if (isLoading) {
+  if (isSettingsLoading || isEmailsLoading) {
     return (
       <div className="p-8 flex justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -122,38 +130,63 @@ export default function EmailNotificationsSection({
       </div>
 
       <div className="grid gap-6">
-        {/* Recipients Section */}
+        {/* Account Emails Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Notification Recipients</CardTitle>
+            <CardTitle className="text-base">Account Emails</CardTitle>
             <CardDescription>
-              Who should receive these alerts? (Your account email is default)
+              Manage your email addresses. Your primary email is used for login and important notifications.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              <Badge
-                variant="secondary"
-                className="px-3 py-1 text-sm bg-blue-50 text-blue-700 border-blue-100 mb-1"
-              >
-                {user.email} (You)
-              </Badge>
-              {settings.recipient_emails.map((email) => (
-                <Badge
-                  key={email}
-                  variant="outline"
-                  className="px-3 py-1 text-sm flex items-center gap-2 mb-1"
-                >
-                  {email}
-                  <X
-                    className="h-3 w-3 cursor-pointer hover:text-red-600"
-                    onClick={() => handleRemoveEmail(email)}
-                  />
-                </Badge>
+          <CardContent className="space-y-6">
+            <div className="space-y-3">
+              {userEmails.map((ue) => (
+                <div key={ue.id} className={cn(
+                  "flex items-center justify-between p-3 rounded-lg border",
+                  ue.is_primary ? "border-blue-200 bg-blue-50/50" : "border-gray-200 bg-white"
+                )}>
+                  <div className="flex flex-col">
+                    <span className="font-medium text-sm text-gray-900">{ue.email}</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      {ue.is_primary ? (
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px] uppercase font-bold tracking-wider">
+                          Primary
+                        </Badge>
+                      ) : null}
+                      {ue.is_verified ? (
+                        <span className="text-xs text-green-600 font-medium flex items-center">
+                          <CheckCircle2 className="w-3 h-3 mr-1" /> Verified
+                        </span>
+                      ) : (
+                        <span className="text-xs text-amber-600 font-medium">Unverified</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {!ue.is_primary && ue.is_verified && (
+                      <Button variant="outline" size="sm" onClick={() => makePrimary(ue.id)}>
+                        Make Primary
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-gray-400 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => handleDeleteEmail(ue.id, ue.is_primary)}
+                      disabled={userEmails.length === 1}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
 
-            <NotificationEmailOTPForm onAdd={handleAddEmail} />
+            <div className="pt-4 border-t">
+              <h4 className="text-sm font-medium mb-3">Add a new email address</h4>
+              <NotificationEmailOTPForm onAdd={handleAddEmail} />
+            </div>
           </CardContent>
         </Card>
 
@@ -292,8 +325,8 @@ export default function EmailNotificationsSection({
       <div className="flex justify-between items-center pt-6 border-t">
         <Button
           variant="outline"
-          onClick={sendTestNotification}
-          disabled={isSendingTest}
+          onClick={() => sendTestNotification(userEmails.map(e => e.email))}
+          disabled={isSendingTest || userEmails.length === 0}
         >
           {isSendingTest ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -40,7 +40,9 @@ const PREVIEW_VARS: Record<string, string> = {
   "user.name": "John Doe",
   "user.email": "john@example.com",
   "course.title": "Web Development Bootcamp",
+  "course.id": "abc123",
   "invoice.amount": "$99.00",
+  "invoice.date": new Date().toLocaleDateString(),
   "lesson.title": "Introduction to JavaScript",
   link: "#",
   otp: "482916",
@@ -65,17 +67,12 @@ function extractVariables(text: string): string[] {
   return [...new Set(matches.map((m) => m.replace(/\{\{|\}\}/g, "").trim()))];
 }
 
-interface ContentFields {
-  title: string;
-  greeting: boolean;
-  body: string;
-  buttonText: string;
-  buttonUrl: string;
-  extraNote: string;
+function toKey(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 }
 
-/** Build HTML from content fields */
-function buildHTML(f: ContentFields): string {
+/** Build the full HTML from simple content fields */
+function buildHTML(fields: ContentFields): string {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -97,11 +94,11 @@ function buildHTML(f: ContentFields): string {
       <h1>{{platform_name}}</h1>
     </div>
     <div class="body">
-      ${f.title ? `<h2>${f.title}</h2>` : ""}
-      ${f.greeting ? `<p>Hello {{user.name}},</p>` : ""}
-      ${f.body ? `<p>${f.body.replace(/\n/g, "<br/>")}</p>` : ""}
-      ${f.buttonText && f.buttonUrl ? `<a href="${f.buttonUrl}" class="btn">${f.buttonText}</a>` : ""}
-      ${f.extraNote ? `<p style="color:#6b7280;font-size:13px;margin-top:20px;">${f.extraNote}</p>` : ""}
+      ${fields.title ? `<h2>${fields.title}</h2>` : ""}
+      ${fields.greeting ? `<p>Hello {{user.name}},</p>` : ""}
+      ${fields.body ? `<p>${fields.body.replace(/\n/g, "<br/>")}</p>` : ""}
+      ${fields.buttonText && fields.buttonUrl ? `<a href="${fields.buttonUrl}" class="btn">${fields.buttonText}</a>` : ""}
+      ${fields.extraNote ? `<p style="color:#6b7280;font-size:13px;margin-top:20px;">${fields.extraNote}</p>` : ""}
     </div>
     <div class="footer">{{platform_name}} &middot; Automated message, do not reply.</div>
   </div>
@@ -109,118 +106,91 @@ function buildHTML(f: ContentFields): string {
 </html>`;
 }
 
-/**
- * Try to extract content fields from existing HTML.
- * Works for templates built with our builder; gracefully degrades for custom HTML.
- */
-function parseHTML(html: string): ContentFields {
-  const get = (regex: RegExp, fallback = "") => {
-    const m = html.match(regex);
-    return m ? m[1].replace(/<br\/?>/g, "\n").trim() : fallback;
-  };
-
-  return {
-    title: get(/<h2[^>]*>([\s\S]*?)<\/h2>/i),
-    greeting: /Hello \{\{user\.name\}\}/.test(html),
-    body: (() => {
-      // Get all <p> tags in .body, skip greeting and note
-      const ps = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)].map((m) =>
-        m[1].replace(/<br\/?>/g, "\n").trim(),
-      );
-      return (
-        ps.find(
-          (p) =>
-            !p.includes("Hello {{user.name}}") &&
-            !p.includes("color:#6b7280") &&
-            p.length > 10,
-        ) ?? ""
-      );
-    })(),
-    buttonText: get(/<a[^>]*class="btn"[^>]*>([\s\S]*?)<\/a>/i),
-    buttonUrl: (() => {
-      const m = html.match(/<a[^>]*href="([^"]*)"[^>]*class="btn"/i) ||
-        html.match(/<a[^>]*class="btn"[^>]*href="([^"]*)"/i);
-      return m ? m[1] : "{{link}}";
-    })(),
-    extraNote: get(/<p[^>]*color:#6b7280[^>]*>([\s\S]*?)<\/p>/i),
-  };
+interface ContentFields {
+  title: string;
+  greeting: boolean;
+  body: string;
+  buttonText: string;
+  buttonUrl: string;
+  extraNote: string;
 }
+
+const DEFAULT_FIELDS: ContentFields = {
+  title: "Welcome!",
+  greeting: true,
+  body: "Thank you for joining us. Your account is now active and ready to use.",
+  buttonText: "Get Started",
+  buttonUrl: "{{link}}",
+  extraNote: "",
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 type Tab = "content" | "html" | "preview";
 
-interface EditEmailTemplateModalProps {
-  template: EmailTemplate;
+interface CreateEmailTemplateModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: string, updates: Partial<EmailTemplate>) => Promise<boolean>;
+  onCreate: (data: Omit<EmailTemplate, "id" | "created_at" | "updated_at">) => Promise<boolean>;
 }
 
-export function EditEmailTemplateModal({
-  template,
+export function CreateEmailTemplateModal({
   isOpen,
   onClose,
-  onSave,
-}: EditEmailTemplateModalProps) {
-  const [name, setName] = useState(template.name ?? "");
-  const [subject, setSubject] = useState(template.subject);
-  const [triggerEvent, setTriggerEvent] = useState(template.trigger_event ?? "none");
-  const [fields, setFields] = useState<ContentFields>(() => parseHTML(template.template_html));
-  const [html, setHtml] = useState(template.template_html);
+  onCreate,
+}: CreateEmailTemplateModalProps) {
+  const [name, setName] = useState("");
+  const [subject, setSubject] = useState("");
+  const [triggerEvent, setTriggerEvent] = useState("none");
+  const [fields, setFields] = useState<ContentFields>(DEFAULT_FIELDS);
+  const [html, setHtml] = useState(() => buildHTML(DEFAULT_FIELDS));
   const [tab, setTab] = useState<Tab>("content");
   const [htmlManuallyEdited, setHtmlManuallyEdited] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Re-sync when a different template is opened
-  useEffect(() => {
-    setName(template.name ?? "");
-    setSubject(template.subject);
-    setTriggerEvent(template.trigger_event ?? "none");
-    setHtml(template.template_html);
-    setFields(parseHTML(template.template_html));
-    setTab("content");
-    setHtmlManuallyEdited(false);
-  }, [template.id, isOpen]);
+  const templateKey = toKey(name);
+  const isValid = name.trim().length > 0 && subject.trim().length > 0 && html.trim().length > 0;
 
-  const updateField = useCallback(
-    <K extends keyof ContentFields>(key: K, val: ContentFields[K]) => {
-      setFields((prev) => {
-        const next = { ...prev, [key]: val };
-        if (!htmlManuallyEdited) setHtml(buildHTML(next));
-        return next;
-      });
-    },
-    [htmlManuallyEdited],
-  );
+  const updateField = useCallback(<K extends keyof ContentFields>(key: K, val: ContentFields[K]) => {
+    setFields((prev) => {
+      const next = { ...prev, [key]: val };
+      if (!htmlManuallyEdited) setHtml(buildHTML(next));
+      return next;
+    });
+  }, [htmlManuallyEdited]);
 
-  // Sync iframe on preview
+  // Update iframe on preview
   useEffect(() => {
     if (tab === "preview" && iframeRef.current) {
       const doc = iframeRef.current.contentDocument;
-      if (doc) {
-        doc.open();
-        doc.write(renderPreview(html));
-        doc.close();
-      }
+      if (doc) { doc.open(); doc.write(renderPreview(html)); doc.close(); }
     }
   }, [tab, html]);
 
-  const isValid =
-    name.trim().length > 0 && subject.trim().length > 0 && html.trim().length > 0;
+  // Reset on close
+  useEffect(() => {
+    if (!isOpen) {
+      setName(""); setSubject(""); setTriggerEvent("none");
+      setFields(DEFAULT_FIELDS); setHtml(buildHTML(DEFAULT_FIELDS));
+      setTab("content"); setHtmlManuallyEdited(false);
+    }
+  }, [isOpen]);
 
-  const handleSave = async () => {
+  const handleCreate = async () => {
     if (!isValid) return;
     setIsSaving(true);
     const variables = extractVariables(subject + " " + html);
-    const success = await onSave(template.id, {
+    const success = await onCreate({
       name: name.trim(),
+      template_key: templateKey,
       subject: subject.trim(),
       template_html: html,
+      template_text: undefined,
       trigger_event: triggerEvent === "none" ? undefined : triggerEvent,
       variables,
-    });
+      is_active: true,
+    } as any);
     setIsSaving(false);
     if (success) onClose();
   };
@@ -229,52 +199,45 @@ export function EditEmailTemplateModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl w-full max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Template</DialogTitle>
+          <DialogTitle>Create Email Template</DialogTitle>
           <DialogDescription>
-            Key:{" "}
-            <code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
-              {template.template_key}
-            </code>
+            Fill in the details below. No coding required.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Name + Trigger */}
+          {/* Name + Key */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="et-name">Template Name *</Label>
-              <Input
-                id="et-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Template name"
-              />
+              <Label htmlFor="ct-name">Template Name *</Label>
+              <Input id="ct-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Welcome Email" />
+            </div>
+            <div className="grid gap-2">
+              <Label className="flex items-center gap-1">
+                Template ID
+                <span className="text-xs font-normal text-muted-foreground">(auto)</span>
+              </Label>
+              <Input value={templateKey} readOnly className="font-mono text-sm bg-muted/50 text-muted-foreground" />
+            </div>
+          </div>
+
+          {/* Subject + Trigger */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="ct-subject">Email Subject *</Label>
+              <Input id="ct-subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Welcome to our platform!" />
             </div>
             <div className="grid gap-2">
               <Label>Send Automatically When</Label>
               <Select value={triggerEvent} onValueChange={setTriggerEvent}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TRIGGER_EVENTS.map((e) => (
-                    <SelectItem key={e.value} value={e.value}>
-                      {e.label}
-                    </SelectItem>
+                    <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* Subject */}
-          <div className="grid gap-2">
-            <Label htmlFor="et-subject">Email Subject *</Label>
-            <Input
-              id="et-subject"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
           </div>
 
           {/* Tab bar */}
@@ -300,13 +263,13 @@ export function EditEmailTemplateModal({
             ))}
           </div>
 
-          {/* CONTENT tab */}
+          {/* CONTENT tab — friendly fields */}
           {tab === "content" && (
             <div className="space-y-4">
               <div className="grid gap-2">
-                <Label htmlFor="et-title">Email Heading</Label>
+                <Label htmlFor="ct-title">Email Heading</Label>
                 <Input
-                  id="et-title"
+                  id="ct-title"
                   value={fields.title}
                   onChange={(e) => updateField("title", e.target.value)}
                   placeholder="e.g. Welcome aboard!"
@@ -316,21 +279,21 @@ export function EditEmailTemplateModal({
 
               <div className="flex items-center gap-3">
                 <input
-                  id="et-greeting"
+                  id="ct-greeting"
                   type="checkbox"
                   checked={fields.greeting}
                   onChange={(e) => updateField("greeting", e.target.checked)}
                   className="w-4 h-4 accent-blue-600"
                 />
-                <Label htmlFor="et-greeting" className="cursor-pointer font-normal">
+                <Label htmlFor="ct-greeting" className="cursor-pointer font-normal">
                   Start with "Hello, [user's name],"
                 </Label>
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="et-body">Message *</Label>
+                <Label htmlFor="ct-body">Message *</Label>
                 <Textarea
-                  id="et-body"
+                  id="ct-body"
                   value={fields.body}
                   onChange={(e) => updateField("body", e.target.value)}
                   className="min-h-[100px] resize-y"
@@ -341,81 +304,45 @@ export function EditEmailTemplateModal({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="et-btn-text">Button Label</Label>
+                  <Label htmlFor="ct-btn-text">Button Label</Label>
                   <Input
-                    id="et-btn-text"
+                    id="ct-btn-text"
                     value={fields.buttonText}
                     onChange={(e) => updateField("buttonText", e.target.value)}
                     placeholder="e.g. Get Started"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="et-btn-url">Button Link</Label>
+                  <Label htmlFor="ct-btn-url">Button Link</Label>
                   <Input
-                    id="et-btn-url"
+                    id="ct-btn-url"
                     value={fields.buttonUrl}
                     onChange={(e) => updateField("buttonUrl", e.target.value)}
                     placeholder="https://... or {{link}}"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Use <code className="font-mono">{"{{link}}"}</code> for a dynamic URL.
-                  </p>
+                  <p className="text-xs text-muted-foreground">Use <code className="font-mono">{"{{link}}"}</code> to insert a dynamic URL.</p>
                 </div>
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="et-note">
-                  Small Note at Bottom{" "}
-                  <span className="text-muted-foreground font-normal">(optional)</span>
-                </Label>
+                <Label htmlFor="ct-note">Small Note at Bottom <span className="text-muted-foreground font-normal">(optional)</span></Label>
                 <Input
-                  id="et-note"
+                  id="ct-note"
                   value={fields.extraNote}
                   onChange={(e) => updateField("extraNote", e.target.value)}
                   placeholder="e.g. If you didn't request this, ignore this email."
                 />
               </div>
-
-              {htmlManuallyEdited && (
-                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
-                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="font-medium">HTML was manually edited</p>
-                    <p className="text-xs mt-0.5">
-                      Content fields no longer auto-update the HTML.{" "}
-                      <button
-                        type="button"
-                        onClick={() => { setHtml(buildHTML(fields)); setHtmlManuallyEdited(false); }}
-                        className="underline hover:no-underline"
-                      >
-                        Rebuild HTML from these fields
-                      </button>
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
           {/* HTML tab */}
           {tab === "html" && (
             <div className="space-y-2">
-              {!htmlManuallyEdited && (
-                <p className="text-xs text-muted-foreground">
-                  This HTML is generated from your Content fields. Editing it directly will disable auto-sync.
-                </p>
-              )}
               {htmlManuallyEdited && (
                 <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
                   <AlertCircle className="w-4 h-4 shrink-0" />
-                  You've manually edited the HTML.{" "}
-                  <button
-                    type="button"
-                    onClick={() => { setHtml(buildHTML(fields)); setHtmlManuallyEdited(false); }}
-                    className="underline ml-1"
-                  >
-                    Rebuild from Content fields
-                  </button>
+                  You've manually edited the HTML. Changes in the Content tab will no longer auto-update the HTML.
                 </div>
               )}
               <Textarea
@@ -429,32 +356,25 @@ export function EditEmailTemplateModal({
           {/* Preview tab */}
           {tab === "preview" && (
             <div className="border rounded-lg overflow-hidden bg-white" style={{ height: 380 }}>
-              <iframe
-                ref={iframeRef}
-                title="Email preview"
-                className="w-full h-full border-0"
-                sandbox="allow-same-origin"
-              />
+              <iframe ref={iframeRef} title="Email preview" className="w-full h-full border-0" sandbox="allow-same-origin" />
             </div>
           )}
 
-          {/* Info */}
+          {/* Hint */}
           <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-800">
             <Info className="w-4 h-4 mt-0.5 shrink-0" />
             <p>
-              The academy name is always included automatically.
-              Use <code className="font-mono text-xs">{"{{link}}"}</code> in the Button Link to
-              insert a dynamic URL at send-time.
+              The academy name is automatically added to every email.
+              In the Button Link field, <code className="font-mono text-xs">{"{{link}}"}</code> will
+              be replaced with the actual URL when the email is sent.
             </p>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSaving}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving || !isValid}>
-            {isSaving ? "Saving…" : "Save Changes"}
+          <Button variant="outline" onClick={onClose} disabled={isSaving}>Cancel</Button>
+          <Button onClick={handleCreate} disabled={isSaving || !isValid}>
+            {isSaving ? "Creating…" : "Create Template"}
           </Button>
         </DialogFooter>
       </DialogContent>

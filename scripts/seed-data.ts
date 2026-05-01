@@ -15,6 +15,11 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
+if (process.env.NODE_ENV === "production" || SUPABASE_URL.includes("production")) {
+  console.error("FATAL ERROR: Attempting to run seed script against a production database!");
+  process.exit(1);
+}
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: {
     autoRefreshToken: false,
@@ -82,7 +87,7 @@ async function main() {
     const email = `student${i}@test.com`;
     const password = "password123";
 
-    let studentUser = users?.find((u) => u.email === email);
+    const studentUser = users?.find((u) => u.email === email);
     if (!studentUser) {
       const { data, error } = await supabase.auth.admin.createUser({
         email,

@@ -100,7 +100,7 @@ export function useAdminNotificationSettings() {
     }
   };
 
-  const sendTestNotification = async () => {
+  const sendTestNotification = async (recipients: string[]) => {
     setIsSendingTest(true);
     try {
       const res = await fetch("/api/admin/notification-settings/test", {
@@ -108,7 +108,7 @@ export function useAdminNotificationSettings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "TEST_ALERT",
-          recipients: settings.recipient_emails,
+          recipients: recipients,
         }),
       });
 

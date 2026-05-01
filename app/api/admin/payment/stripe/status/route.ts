@@ -1,43 +1,64 @@
+/**
+ * app/api/admin/payment/stripe/status/route.ts
+ *
+ * Returns live Stripe connection status by actually querying the Stripe API.
+ */
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin } from "@/lib/security/requireAdmin";
+import { stripeService } from "@/lib/services/stripe.service";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    await requireAdmin();
-    const supabase = await createClient();
+    const { error: authError } = await requireAdmin();
+    if (authError) return authError;
 
-    // In a real app, we would query the payment_integrations table
-    // For now, we'll return a mock status or check if keys exist
-
-    // Check if Stripe keys exist in settings
-    const { data: settings } = await supabase
+    const supabase = createAdminClient();
+    const { data: rows } = await supabase
       .from("platform_settings")
       .select("setting_key, setting_value")
-      .in("setting_key", ["stripe_public_key", "stripe_secret_key"]);
+      .in("setting_key", [
+        "stripe_secret_key",
+        "stripe_publishable_key",
+        "stripe_webhook_secret",
+      ]);
 
-    const hasPublicKey = settings?.some(
-      (s: any) => s.setting_key === "stripe_public_key" && s.setting_value,
-    );
-    const hasSecretKey = settings?.some(
-      (s: any) => s.setting_key === "stripe_secret_key" && s.setting_value,
-    );
+    const map: Record<string, string> = {};
+    rows?.forEach((r: { setting_key: string; setting_value: unknown }) => {
+      map[r.setting_key] = (r.setting_value as string) ?? "";
+    });
 
-    const connected = hasPublicKey && hasSecretKey;
+    const secretKey = map["stripe_secret_key"];
+    const publishableKey = map["stripe_publishable_key"];
+    const webhookSecret = map["stripe_webhook_secret"];
+
+    const hasKeys = !!(secretKey && publishableKey);
+    const isLiveMode = secretKey?.startsWith("sk_live_") ?? false;
+
+    if (!hasKeys) {
+      return NextResponse.json({
+        connected: false,
+        verified: false,
+        test_mode: true,
+        has_webhook: false,
+        account: null,
+        message: "Stripe keys not configured",
+      });
+    }
+
+    // Real connection test
+    const test = await stripeService.testConnection(secretKey);
 
     return NextResponse.json({
-      connected,
-      verified: connected, // Mock verification
-      account: connected
-        ? {
-            email: "merchant@example.com",
-            type: "standard",
-            country: "US",
-          }
-        : null,
-      test_mode: true,
+      connected: test.success,
+      verified: test.success,
+      test_mode: !isLiveMode,
+      has_webhook: !!webhookSecret,
+      account: test.success ? { type: isLiveMode ? "live" : "test" } : null,
+      error: test.error ?? null,
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Internal error";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

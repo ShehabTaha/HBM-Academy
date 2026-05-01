@@ -89,11 +89,11 @@ function AppSidebar() {
 
   const handleLogout = async () => {
     try {
-      if ((session?.user as any)?.sessionId) {
+      if ((session?.user as Record<string, unknown>)?.sessionId) {
         await fetch("/api/user/sessions/revoke", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: (session?.user as any)?.sessionId }),
+          body: JSON.stringify({ sessionId: (session?.user as Record<string, unknown>)?.sessionId }),
         });
       }
     } catch (e) {
@@ -111,30 +111,27 @@ function AppSidebar() {
         `}
         collapsible="icon"
       >
-        <SidebarHeader className="flex flex-col gap-1 px-3 pt-4 pb-2 ">
+        <SidebarHeader className="flex flex-col gap-1 px-4 py-6">
           {/* Logo and title */}
-          <div className="flex items-center  gap-2">
+          <div className="flex items-center gap-3">
             <Image
               src="/logo.svg"
               alt="Logo"
-              width={60}
-              height={60}
-              className="transition-all ease-in-out"
+              width={40}
+              height={40}
+              className="object-contain shrink-0"
             />
             {state === "expanded" && (
-              <div className="flex flex-col right-3">
-                <p className="text-3xl font-medium whitespace-nowrap transition-all ease-in-out">
-                  HBM
-                  <span className="relative right-[-5] top-[-25] text-sm">
-                    Academy
-                  </span>
-                </p>
-                <span className="text-xs text-gray-500 -mt-2">Admin Panel</span>
+              <div className="flex flex-col overflow-hidden">
+                <span className="text-lg font-bold truncate leading-tight tracking-tight">
+                  HBM Academy
+                </span>
+                <span className="text-xs text-muted-foreground truncate">
+                  Admin Panel
+                </span>
               </div>
             )}
           </div>
-
-          {/* Sidebar trigger */}
         </SidebarHeader>
 
         <SidebarContent className=" flex-1 mt-8 gap-12 max-sm:overflow-visible">
@@ -155,26 +152,25 @@ function AppSidebar() {
                   <SidebarMenuItem key={item.name}>
                     <SidebarMenuButton
                       asChild
+                      tooltip={item.name}
                       className={`
-                      flex items-center gap-6 w-10/12 px-6 py-2 rounded-lg
-                      font-medium transition ml-6 mt-3
-                      ${
-                        isActive
-                          ? "bg-gray-100 text-primary-blue"
-                          : "text-gray-400 hover:bg-gray-100 hover:text-primary-blue"
-                      }
-                      ${state === "collapsed" ? " justify-center px-0" : ""}
-                    `}
-                      tabIndex={isActive ? 0 : -1}
+                        transition-colors h-11 px-3
+                        ${
+                          isActive
+                            ? "bg-gray-100 text-primary-blue font-semibold"
+                            : "text-gray-500 hover:bg-gray-100 hover:text-primary-blue font-medium"
+                        }
+                        ${state === "collapsed" ? "justify-center" : ""}
+                      `}
                     >
                       <Link
                         href={item.href}
                         aria-current={isActive ? "page" : undefined}
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-3 w-full"
                       >
-                        <ItemIcon size={28} strokeWidth={1.5} />
+                        <ItemIcon size={22} strokeWidth={isActive ? 2 : 1.5} className="shrink-0" />
                         {state !== "collapsed" && (
-                          <span className="truncate transition-all ease-in-out">
+                          <span className="truncate">
                             {item.name}
                           </span>
                         )}
@@ -203,30 +199,25 @@ function AppSidebar() {
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton
                     asChild
+                    tooltip={item.name}
                     className={`
-                      flex items-center gap-3 w-10/12 px-6 py-2 rounded-lg
-                      font-medium transition ml-6 mt-3 self-end
+                      transition-colors h-11 px-3 mt-1
                       ${
                         isActive
-                          ? "bg-gray-100 text-primary-blue"
-                          : "text-gray-400 hover:bg-gray-100 hover:text-primary-blue"
+                          ? "bg-gray-100 text-primary-blue font-semibold"
+                          : "text-gray-500 hover:bg-gray-100 hover:text-primary-blue font-medium"
                       }
-                      ${state === "collapsed" ? " justify-center px-0" : ""}
+                      ${state === "collapsed" ? "justify-center" : ""}
                     `}
-                    tabIndex={isActive ? 0 : -1}
                   >
                     <Link
                       href={item.href}
                       aria-current={isActive ? "page" : undefined}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-3 w-full"
                     >
-                      <ItemIcon
-                        size={28}
-                        strokeWidth={1.5}
-                        className="w-6 h-6"
-                      />
+                      <ItemIcon size={22} strokeWidth={isActive ? 2 : 1.5} className="shrink-0" />
                       {state !== "collapsed" && (
-                        <span className="truncate transition-all ease-in-out">
+                        <span className="truncate">
                           {item.name}
                         </span>
                       )}
@@ -240,16 +231,16 @@ function AppSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={handleLogout}
+                tooltip="Logout"
                 className={`
-                  flex items-center gap-3 w-10/12 px-6 py-2 rounded-lg
-                  font-medium transition ml-6 mt-3 self-end cursor-pointer
-                  text-red-600 hover:bg-red-50 hover:text-red-700
-                  ${state === "collapsed" ? " justify-center px-0" : ""}
+                  transition-colors h-11 px-3 mt-1 cursor-pointer
+                  text-red-600 hover:bg-red-50 hover:text-red-700 font-medium
+                  ${state === "collapsed" ? "justify-center" : ""}
                 `}
               >
-                <LogOut size={28} strokeWidth={1.5} className="w-6 h-6" />
+                <LogOut size={22} strokeWidth={1.5} className="shrink-0" />
                 {state !== "collapsed" && (
-                  <span className="truncate transition-all ease-in-out">
+                  <span className="truncate">
                     Logout
                   </span>
                 )}

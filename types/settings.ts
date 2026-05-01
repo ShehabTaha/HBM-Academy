@@ -12,8 +12,8 @@ export interface PlatformSettings {
   theme_color?: string;
 
   // Payment
-  stripe_public_key?: string;
-  stripe_secret_key?: string; // sensitive
+  stripe_publishable_key?: string;
+  stripe_secret_key?: string; // sensitive – masked in GET responses
   stripe_webhook_secret?: string; // sensitive
   payment_currency: string;
   tax_rate?: number;
@@ -21,10 +21,15 @@ export interface PlatformSettings {
   maximum_course_price?: number;
 
   // Email
-  email_provider: "sendgrid" | "smtp" | "aws_ses";
-  sendgrid_api_key?: string; // sensitive
+  email_provider: "sendgrid" | "smtp" | "resend";
+  email_api_key?: string; // sensitive
   email_from_address: string;
   email_from_name: string;
+  email_smtp_host?: string;
+  email_smtp_port?: number;
+  email_smtp_user?: string;
+  email_smtp_pass?: string; // sensitive
+  email_smtp_secure?: boolean;
 
   // Course
   default_course_level: "beginner" | "intermediate" | "advanced";
@@ -73,15 +78,53 @@ export interface PaymentIntegration {
 export interface EmailTemplate {
   id: string;
   template_key: string;
+  name?: string;
   subject: string;
   template_html: string;
-  template_text: string;
+  template_text?: string;
   variables: string[];
+  trigger_event?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
+export interface EmailLog {
+  id: string;
+  recipient: string;
+  subject: string;
+  template_key?: string;
+  user_id?: string;
+  status: "sent" | "failed";
+  provider: string;
+  error_message?: string;
+  sent_at: string;
+}
+
+export interface StripeEvent {
+  id: string;
+  stripe_event_id: string;
+  event_type: string;
+  status: "received" | "processing" | "processed" | "failed";
+  user_id?: string;
+  course_id?: string;
+  amount?: number;
+  currency?: string;
+  error_message?: string;
+  processed_at?: string;
+  created_at: string;
+}
+
+export interface StripeConnectionStatus {
+  connected: boolean;
+  verified: boolean;
+  test_mode: boolean;
+  has_webhook: boolean;
+  account?: { type: string } | null;
+  message?: string;
+  error?: string | null;
+}
+
 export interface SettingsResponse {
-  [key: string]: any;
+  [key: string]: string | number | boolean | null | undefined;
 }

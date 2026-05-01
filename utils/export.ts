@@ -1,4 +1,4 @@
-export const downloadCSV = (data: any[], filename: string) => {
+export const downloadCSV = <T extends object>(data: T[], filename: string) => {
   if (!data || !data.length) return;
 
   const headers = Object.keys(data[0]);
@@ -7,7 +7,7 @@ export const downloadCSV = (data: any[], filename: string) => {
     ...data.map((row) =>
       headers
         .map((header) => {
-          const value = row[header];
+          const value = row[header as keyof T];
           // Escape quotes and wrap in quotes if contains comma
           const escaped = ("" + (value ?? "")).replace(/"/g, '""');
           return `"${escaped}"`;

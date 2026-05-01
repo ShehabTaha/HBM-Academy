@@ -15,7 +15,7 @@ test.describe("API Admin Endpoints", () => {
       request,
     }) => {
       const response = await request.get(route.path);
-      expect(response.status()).toBeOneOf([401, 403]);
+      expect([401, 403]).toContain(response.status());
     });
 
     test(`should allow admin access to ${route.path}`, async ({ request }) => {

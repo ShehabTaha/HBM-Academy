@@ -88,17 +88,38 @@ export async function PUT(request: Request) {
       const sensitiveKeys = [
         "stripe_secret_key",
         "stripe_webhook_secret",
+        "email_api_key",
+        "email_smtp_pass",
         "sendgrid_api_key",
         "payment_integrations",
       ];
       const isSensitive = sensitiveKeys.some((k) => key.includes(k));
+
+      // Infer category from key name
+      const categoryMap: Record<string, string> = {
+        stripe: "payment",
+        payment: "payment",
+        tax: "payment",
+        email: "email",
+        smtp: "email",
+        sendgrid: "email",
+        platform: "general",
+        support: "general",
+        maintenance: "advanced",
+        enable: "feature",
+        default_course: "course",
+      };
+      const inferredCategory =
+        Object.entries(categoryMap).find(([prefix]) => key.startsWith(prefix))?.[1] ??
+        category ??
+        "general";
 
       // @ts-ignore
       return supabase.from("platform_settings").upsert(
         {
           setting_key: key,
           setting_value: value,
-          category: category || "general",
+          category: inferredCategory,
           is_sensitive: isSensitive,
           updated_by: (user as any).id,
           updated_at: new Date().toISOString(),

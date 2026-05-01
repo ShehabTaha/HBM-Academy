@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/security/requireAdmin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/services/email.service";
 
 export async function POST(
   request: NextRequest,
@@ -12,17 +13,18 @@ export async function POST(
 
     const { submissionId } = await params;
     const body = await request.json();
-    const { feedback, sendEmail } = body;
+    const { feedback, sendEmail: shouldSendEmail } = body;
 
     const supabase = createAdminClient();
 
     // 2. Get Submission details (to find student, course, lesson)
-    const { data: submissionData, error: subError } = await supabase
-      .from("assignment_submissions" as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: submissionData, error: subError } = await (supabase.from("assignment_submissions") as any)
       .select("*")
       .eq("id", submissionId)
       .single();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const submission = submissionData as any;
 
     if (subError || !submission) {
@@ -35,7 +37,7 @@ export async function POST(
     // 3. Update Submission Status
     const { error: updateError } = await supabase
       .from("assignment_submissions")
-      // @ts-ignore
+      // @ts-expect-error - Expected type mismatch for status in generated types
       .update({
         status: "approved",
         admin_feedback: feedback,
@@ -57,11 +59,12 @@ export async function POST(
       .eq("course_id", submission.course_id)
       .single();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const enrollment = enrollmentData as any;
 
     if (enrollment) {
       // Upsert progress
-      // @ts-ignore
+      // @ts-expect-error - Supabase generated types missing upsert options
       const { error: progressError } = await supabase.from("progress").upsert(
         {
           enrollment_id: enrollment.id,
@@ -81,15 +84,20 @@ export async function POST(
       }
     }
 
-    // 5. Send Email (Mock)
-    if (sendEmail) {
-      // TODO: Integrate with email service
+    // 5. Send Email
+    if (shouldSendEmail) {
+      const studentEmail = submission?.student?.email || "student@example.com";
+      await sendEmail({
+        to: studentEmail,
+        subject: "Your Assignment was Approved",
+        html: `<p>Great news! Your assignment has been approved.</p><p><strong>Feedback:</strong> ${feedback || "Good job!"}</p>`,
+      });
       console.log(`Sending approval email to student ${submission.student_id}`);
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error approving submission:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

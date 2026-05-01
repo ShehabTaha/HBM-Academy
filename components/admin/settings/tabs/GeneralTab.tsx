@@ -92,7 +92,7 @@ export function GeneralTab({ settings, updateSetting }: GeneralTabProps) {
                 onChange={(e) =>
                   updateSetting("support_email", e.target.value)
                 }
-                placeholder="support@example.com"
+                placeholder="support@hbmacademy.com"
               />
             </div>
             <div className="grid gap-2">
@@ -101,7 +101,7 @@ export function GeneralTab({ settings, updateSetting }: GeneralTabProps) {
                 id="support_url"
                 value={settings.support_url || ""}
                 onChange={(e) => updateSetting("support_url", e.target.value)}
-                placeholder="support.example.com"
+                placeholder="support.hbmacademy.com"
               />
             </div>
           </div>
