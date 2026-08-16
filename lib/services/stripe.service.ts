@@ -286,6 +286,15 @@ export const stripeService = {
     }), "checkout.sessions.create(subscription)");
   },
 
+  async createBillingPortalSession(customerId: string, returnUrl: string) {
+    const client = await buildStripeClient();
+
+    return withStripeRetry(() => client.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: returnUrl,
+    }), "billingPortal.sessions.create");
+  },
+
   async getConnectStatus(): Promise<StripeConnectStatus> {
     const config = await getStripeConfig();
     if (!config.secretKey) return mapConnectStatus(null);
