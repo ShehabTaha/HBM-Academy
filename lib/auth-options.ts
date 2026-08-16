@@ -171,9 +171,9 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ user }) {
-      if (!isAllowedAdminEmail(user.email)) {
+      if (user.role === "admin" && !isAllowedAdminEmail(user.email)) {
         console.warn(
-          `[Auth] Sign-in denied for unauthorized email: ${user.email}`,
+          `[Auth] Sign-in denied for unauthorized admin email: ${user.email}`,
         );
         return false;
       }
