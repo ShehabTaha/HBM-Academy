@@ -5,22 +5,20 @@ import bcrypt from "bcryptjs";
 // Force dynamic to prevent caching
 export const dynamic = "force-dynamic";
 
-// Initialize Supabase Client (safe in route handler if vars are missing, will error on call)
-// Initialize Supabase Client (Prefer Service Role for Admin access, fallback to Anon)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
-  },
-});
-
 export async function GET(req: Request) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  const supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+
   const { searchParams } = new URL(req.url);
   const email = searchParams.get("email");
   const passwordToCheck = searchParams.get("password");

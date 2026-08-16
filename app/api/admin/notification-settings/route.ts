@@ -6,12 +6,12 @@ import { adminNotificationSettingsSchema } from "@/lib/validations/admin-notific
 
 // Use service role to manage settings table if needed, or just standard client
 // We'll use service role to ensure we can upsert easily even if RLS is tricky
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
-
 export async function GET() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
   const session = await getServerSession(authOptions);
   if (!session || !session.user || (session.user as { role?: string }).role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,6 +38,11 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
   const session = await getServerSession(authOptions);
   if (!session || !session.user || (session.user as { role?: string }).role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
