@@ -121,6 +121,15 @@ export interface StripeConnectionStatus {
   test_mode: boolean;
   has_webhook: boolean;
   account?: { type: string } | null;
+  connect?: {
+    account_id: string | null;
+    connected: boolean;
+    charges_enabled: boolean;
+    payouts_enabled: boolean;
+    details_submitted: boolean;
+    status: "not_started" | "pending" | "enabled" | "restricted";
+    requirements_due: string[];
+  };
   message?: string;
   error?: string | null;
 }

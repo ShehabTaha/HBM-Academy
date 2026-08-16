@@ -20,12 +20,32 @@ export interface CreateCheckoutSessionParams {
   cancelUrl: string;
 }
 
+export interface CreateSubscriptionCheckoutParams {
+  userId: string;
+  userEmail: string;
+  category?: string | null;
+  price: number;
+  currency?: string;
+  successUrl: string;
+  cancelUrl: string;
+}
+
 export interface StripeConnectionTestResult {
   success: boolean;
   mode: "test" | "live";
   accountId?: string;
   accountType?: string;
   error?: string;
+}
+
+export interface StripeConnectStatus {
+  account_id: string | null;
+  connected: boolean;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  details_submitted: boolean;
+  status: "not_started" | "pending" | "enabled" | "restricted";
+  requirements_due: string[];
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -49,8 +69,11 @@ async function getStripeConfig(): Promise<{ secretKey: string; publishableKey: s
   };
 }
 
+function getStripeMode(secretKey: string): "test" | "live" {
+  return secretKey.startsWith("sk_live_") ? "live" : "test";
+}
+
 /** Build a Stripe client with the provided key, DB stored key, or fall back to env. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function buildStripeClient(secretKey?: string): Promise<Stripe> {
   let key = secretKey;
 
@@ -64,10 +87,90 @@ async function buildStripeClient(secretKey?: string): Promise<Stripe> {
   return new Stripe(key, { apiVersion: "2026-04-22.dahlia" as any, typescript: true });
 }
 
+async function withStripeRetry<T>(operation: () => Promise<T>, label: string): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      const retryable =
+        error instanceof Stripe.errors.StripeAPIError ||
+        error instanceof Stripe.errors.StripeConnectionError ||
+        error instanceof Stripe.errors.StripeRateLimitError;
+      if (!retryable || attempt === 3) break;
+      await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+    }
+  }
+  const message = lastError instanceof Error ? lastError.message : "Unknown Stripe error";
+  console.error(`[Stripe] ${label} failed:`, message);
+  throw lastError;
+}
+
 /** Typed accessor for new tables not yet in database.types.ts */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(supabase: ReturnType<typeof createAdminClient>): any {
   return supabase as any;
+}
+
+async function getSettingMap(keys: string[]) {
+  const supabase = createAdminClient();
+  const { data: rows } = await supabase
+    .from("platform_settings")
+    .select("setting_key, setting_value")
+    .in("setting_key", keys);
+
+  const map: Record<string, any> = {};
+  rows?.forEach((row: any) => {
+    map[row.setting_key] = row.setting_value;
+  });
+  return map;
+}
+
+async function upsertSettings(values: Record<string, unknown>) {
+  const supabase = createAdminClient();
+  const rows = Object.entries(values).map(([setting_key, setting_value]) => ({
+    setting_key,
+    setting_value,
+    category: "payment",
+    is_sensitive: setting_key === "stripe_connect_account_id",
+    updated_at: new Date().toISOString(),
+  }));
+
+  await Promise.all(
+    rows.map((row) =>
+      (supabase.from("platform_settings") as any).upsert(row, {
+        onConflict: "setting_key",
+      }),
+    ),
+  );
+}
+
+function mapConnectStatus(account: Stripe.Account | null): StripeConnectStatus {
+  if (!account) {
+    return {
+      account_id: null,
+      connected: false,
+      charges_enabled: false,
+      payouts_enabled: false,
+      details_submitted: false,
+      status: "not_started",
+      requirements_due: [],
+    };
+  }
+
+  const requirementsDue = account.requirements?.currently_due ?? [];
+  const enabled = account.charges_enabled && account.payouts_enabled && account.details_submitted;
+
+  return {
+    account_id: account.id,
+    connected: enabled,
+    charges_enabled: account.charges_enabled,
+    payouts_enabled: account.payouts_enabled,
+    details_submitted: account.details_submitted,
+    status: enabled ? "enabled" : requirementsDue.length > 0 ? "restricted" : "pending",
+    requirements_due: requirementsDue,
+  };
 }
 
 // ─── Service ────────────────────────────────────────────────────────────────
@@ -80,9 +183,9 @@ export const stripeService = {
   async testConnection(secretKey?: string): Promise<StripeConnectionTestResult> {
     try {
       const client = await buildStripeClient(secretKey);
-      await client.balance.retrieve();
-      const isLive = (secretKey ?? process.env.STRIPE_SECRET_KEY ?? "").startsWith("sk_live_");
-      return { success: true, mode: isLive ? "live" : "test" };
+      await withStripeRetry(() => client.balance.retrieve(), "balance.retrieve");
+      const config = secretKey ? { secretKey } : await getStripeConfig();
+      return { success: true, mode: getStripeMode(config.secretKey) };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown Stripe error";
       return { success: false, mode: "test", error: message };
@@ -107,7 +210,8 @@ export const stripeService = {
     const client = await buildStripeClient();
     const idempotencyKey = `checkout_${userId}_${courseId}_${Date.now()}`;
 
-    const session = await client.checkout.sessions.create(
+    const session = await withStripeRetry(
+      () => client.checkout.sessions.create(
       {
         payment_method_types: ["card"],
         mode: "payment",
@@ -122,14 +226,154 @@ export const stripeService = {
             quantity: 1,
           },
         ],
-        metadata: { userId, courseId, userEmail },
+        metadata: { studentId: userId, courseId, userEmail, purchaseType: "course" },
         success_url: successUrl,
         cancel_url: cancelUrl,
       },
       { idempotencyKey },
+    ),
+      "checkout.sessions.create",
     );
 
     return session;
+  },
+
+  async createSubscriptionCheckoutSession(params: CreateSubscriptionCheckoutParams) {
+    const {
+      userId,
+      userEmail,
+      category,
+      price,
+      currency = "usd",
+      successUrl,
+      cancelUrl,
+    } = params;
+
+    const client = await buildStripeClient();
+
+    return withStripeRetry(() => client.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "subscription",
+      customer_email: userEmail,
+      line_items: [
+        {
+          price_data: {
+            currency,
+            recurring: { interval: "month" },
+            product_data: {
+              name: category ? `HBM ${category} subscription` : "HBM Academy all-access",
+              metadata: { category: category ?? "all" },
+            },
+            unit_amount: Math.round(price * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        studentId: userId,
+        category: category ?? "",
+        purchaseType: "subscription",
+        userEmail,
+      },
+      subscription_data: {
+        metadata: {
+          studentId: userId,
+          category: category ?? "",
+        },
+      },
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    }), "checkout.sessions.create(subscription)");
+  },
+
+  async getConnectStatus(): Promise<StripeConnectStatus> {
+    const config = await getStripeConfig();
+    if (!config.secretKey) return mapConnectStatus(null);
+
+    const mode = getStripeMode(config.secretKey);
+    const settings = await getSettingMap([
+      "stripe_connect_account_id",
+      "stripe_connect_mode",
+    ]);
+    const accountId = settings.stripe_connect_account_id as string | null | undefined;
+    const storedMode = settings.stripe_connect_mode as string | undefined;
+
+    if (!accountId || storedMode !== mode) {
+      return mapConnectStatus(null);
+    }
+
+    const client = await buildStripeClient(config.secretKey);
+    const account = await withStripeRetry(
+      () => client.accounts.retrieve(accountId),
+      "accounts.retrieve",
+    );
+    return this.persistConnectStatus(account, mode);
+  },
+
+  async createConnectOnboardingLink(origin: string) {
+    const config = await getStripeConfig();
+    if (!config.secretKey) {
+      throw new Error("Stripe secret key is required before starting Connect onboarding.");
+    }
+
+    const mode = getStripeMode(config.secretKey);
+    const client = await buildStripeClient(config.secretKey);
+    const settings = await getSettingMap([
+      "stripe_connect_account_id",
+      "stripe_connect_mode",
+    ]);
+
+    let accountId = settings.stripe_connect_account_id as string | null | undefined;
+    const storedMode = settings.stripe_connect_mode as string | undefined;
+
+    if (!accountId || storedMode !== mode) {
+      const account = await withStripeRetry(
+        () => client.accounts.create({
+          type: "express",
+          capabilities: {
+            card_payments: { requested: true },
+            transfers: { requested: true },
+          },
+          business_profile: {
+            product_description: "HBM Academy course payments and instructor payouts",
+            url: origin,
+          },
+          metadata: {
+            platform: "hbm_academy",
+            mode,
+          },
+        }),
+        "accounts.create",
+      );
+      accountId = account.id;
+      await this.persistConnectStatus(account, mode);
+    }
+
+    const accountLink = await withStripeRetry(
+      () => client.accountLinks.create({
+        account: accountId!,
+        refresh_url: `${origin}/api/admin/payment/stripe/connect/refresh`,
+        return_url: `${origin}/api/admin/payment/stripe/connect/callback`,
+        type: "account_onboarding",
+      }),
+      "accountLinks.create",
+    );
+
+    return { url: accountLink.url, accountId, mode };
+  },
+
+  async persistConnectStatus(account: Stripe.Account, mode?: "test" | "live") {
+    const status = mapConnectStatus(account);
+    await upsertSettings({
+      stripe_connect_account_id: account.id,
+      stripe_connect_mode: mode ?? "test",
+      stripe_connect_status: status.status,
+      stripe_connect_charges_enabled: status.charges_enabled,
+      stripe_connect_payouts_enabled: status.payouts_enabled,
+      stripe_connect_details_submitted: status.details_submitted,
+      stripe_connect_requirements_due: status.requirements_due,
+    });
+    return status;
   },
 
   /**
@@ -160,10 +404,12 @@ export const stripeService = {
   async handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const supabase = createAdminClient();
     const dbAny = db(supabase);
-    const { userId, courseId } = session.metadata ?? {};
+    const { studentId, userId, courseId, purchaseType, category } =
+      session.metadata ?? {};
+    const resolvedStudentId = studentId ?? userId;
 
-    if (!userId || !courseId) {
-      throw new Error("Missing userId or courseId in session metadata.");
+    if (!resolvedStudentId) {
+      throw new Error("Missing studentId in session metadata.");
     }
 
     // Idempotency: skip if already processed
@@ -184,25 +430,53 @@ export const stripeService = {
       event_type: "checkout.session.completed",
       status: "processing",
       payload: session,
-      user_id: userId,
+      user_id: null,
       course_id: courseId,
       amount: session.amount_total,
       currency: session.currency,
     });
+
+    if (purchaseType === "subscription") {
+      if (!session.subscription) {
+        throw new Error("Missing Stripe subscription id.");
+      }
+
+      await dbAny.from("student_subscriptions").upsert(
+        {
+          student_id: resolvedStudentId,
+          stripe_subscription_id: session.subscription,
+          stripe_customer_id: session.customer,
+          category: category || null,
+          status: "active",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "stripe_subscription_id" },
+      );
+
+      await dbAny
+        .from("stripe_events")
+        .update({ status: "processed", processed_at: new Date().toISOString() })
+        .eq("stripe_event_id", `checkout_${session.id}`);
+      return;
+    }
+
+    if (!courseId) {
+      throw new Error("Missing courseId in session metadata.");
+    }
 
     // 2. Create or update enrollment
     const { error: enrollError } = await dbAny
       .from("enrollments")
       .upsert(
         {
-          user_id: userId,
+          student_id: resolvedStudentId,
           course_id: courseId,
           enrolled_at: new Date().toISOString(),
           payment_status: "paid",
           stripe_session_id: session.id,
           amount_paid: session.amount_total,
         },
-        { onConflict: "user_id,course_id" },
+        { onConflict: "student_id,course_id" },
       );
 
     if (enrollError) throw enrollError;
@@ -214,7 +488,7 @@ export const stripeService = {
       .eq("stripe_event_id", `checkout_${session.id}`);
 
     console.log(
-      `[Stripe] Checkout completed → enrollment created for user=${userId} course=${courseId}`,
+      `[Stripe] Checkout completed -> enrollment created for student=${resolvedStudentId} course=${courseId}`,
     );
   },
 
@@ -239,5 +513,38 @@ export const stripeService = {
     );
 
     console.log(`[Stripe] PaymentIntent succeeded: ${paymentIntent.id}`);
+  },
+
+  async handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+    const supabase = createAdminClient();
+    const dbAny = db(supabase);
+    const studentId = subscription.metadata?.studentId;
+    if (!studentId) return;
+
+    await dbAny.from("student_subscriptions").upsert(
+      {
+        student_id: studentId,
+        stripe_subscription_id: subscription.id,
+        stripe_customer_id:
+          typeof subscription.customer === "string"
+            ? subscription.customer
+            : subscription.customer.id,
+        category: subscription.metadata?.category || null,
+        status: subscription.status,
+        current_period_start: new Date(
+          subscription.items.data[0]?.current_period_start * 1000,
+        ).toISOString(),
+        current_period_end: new Date(
+          subscription.items.data[0]?.current_period_end * 1000,
+        ).toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "stripe_subscription_id" },
+    );
+  },
+
+  async handleAccountUpdated(account: Stripe.Account) {
+    const config = await getStripeConfig();
+    await this.persistConnectStatus(account, getStripeMode(config.secretKey));
   },
 };

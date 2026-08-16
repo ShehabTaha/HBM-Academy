@@ -24,8 +24,6 @@ export async function POST(request: Request) {
   const headersList = await headers();
   const signature = headersList.get("stripe-signature");
 
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? "";
-
   if (!signature) {
     console.error("[Stripe Webhook] Missing stripe-signature header");
     return new NextResponse("Missing signature", { status: 400 });
@@ -113,7 +111,24 @@ async function processWebhookEvent(event: Stripe.Event, dbAny: any) {
       console.warn(`[Stripe Webhook] Payment failed: ${paymentIntent.id}`);
       break;
     }
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted": {
+      const subscription = event.data.object as Stripe.Subscription;
+      await stripeService.handleSubscriptionUpdated(subscription);
+      break;
+    }
+    case "account.updated": {
+      const account = event.data.object as Stripe.Account;
+      await stripeService.handleAccountUpdated(account);
+      break;
+    }
     default:
       console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
   }
+
+  await dbAny
+    .from("stripe_events")
+    .update({ status: "processed", processed_at: new Date().toISOString() })
+    .eq("stripe_event_id", event.id);
 }

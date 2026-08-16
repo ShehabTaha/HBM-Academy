@@ -18,11 +18,21 @@ export async function POST(
     const supabase = createAdminClient();
 
     // 2. Get Submission details (to find student, course, lesson)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: submissionData, error: subError } = await (supabase.from("assignment_submissions") as any)
+    let sourceTable = "assignment_submissions";
+    let { data: submissionData, error: subError } = await (supabase.from("assignment_submissions") as any)
       .select("*")
       .eq("id", submissionId)
       .single();
+
+    if (subError || !submissionData) {
+      const practicalResult = await (supabase.from("practical_submissions") as any)
+        .select("*, lesson:lessons(section:sections(course_id)), student:users(email)")
+        .eq("id", submissionId)
+        .single();
+      submissionData = practicalResult.data;
+      subError = practicalResult.error;
+      sourceTable = "practical_submissions";
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const submission = submissionData as any;
@@ -35,15 +45,23 @@ export async function POST(
     }
 
     // 3. Update Submission Status
-    const { error: updateError } = await supabase
-      .from("assignment_submissions")
-      // @ts-expect-error - Expected type mismatch for status in generated types
-      .update({
-        status: "approved",
-        admin_feedback: feedback,
-        admin_id: user.id,
-        reviewed_at: new Date().toISOString(),
-      })
+    const updatePayload =
+      sourceTable === "practical_submissions"
+        ? {
+            status: "approved",
+            admin_feedback: feedback,
+            reviewed_by: user.id,
+            reviewed_at: new Date().toISOString(),
+          }
+        : {
+            status: "approved",
+            admin_feedback: feedback,
+            admin_id: user.id,
+            reviewed_at: new Date().toISOString(),
+          };
+
+    const { error: updateError } = await (supabase.from(sourceTable) as any)
+      .update(updatePayload)
       .eq("id", submissionId);
 
     if (updateError) {
@@ -56,7 +74,7 @@ export async function POST(
       .from("enrollments")
       .select("id")
       .eq("student_id", submission.student_id)
-      .eq("course_id", submission.course_id)
+        .eq("course_id", submission.course_id || submission.lesson?.section?.course_id)
       .single();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,7 +86,7 @@ export async function POST(
       const { error: progressError } = await supabase.from("progress").upsert(
         {
           enrollment_id: enrollment.id,
-          lesson_id: submission.assignment_id,
+          lesson_id: submission.assignment_id || submission.lesson_id,
           is_completed: true,
           completed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),

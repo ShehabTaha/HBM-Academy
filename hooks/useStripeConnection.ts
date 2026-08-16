@@ -6,14 +6,17 @@ interface UseStripeConnectionReturn {
   status: StripeConnectionStatus | null;
   loading: boolean;
   testing: boolean;
+  onboarding: boolean;
   fetchStatus: () => Promise<void>;
   testConnection: (secretKey?: string) => Promise<StripeConnectionStatus>;
+  startOnboarding: () => Promise<void>;
 }
 
 export function useStripeConnection(): UseStripeConnectionReturn {
   const [status, setStatus] = useState<StripeConnectionStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [onboarding, setOnboarding] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -90,5 +93,29 @@ export function useStripeConnection(): UseStripeConnectionReturn {
     }
   }, [status]);
 
-  return { status, loading, testing, fetchStatus, testConnection };
+  const startOnboarding = useCallback(async () => {
+    setOnboarding(true);
+    try {
+      const response = await fetch("/api/admin/payment/stripe/connect", {
+        method: "POST",
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Stripe onboarding could not be started.");
+      }
+
+      window.location.href = data.url;
+    } catch (error) {
+      toast({
+        title: "Stripe onboarding failed",
+        description:
+          error instanceof Error ? error.message : "Stripe onboarding could not be started.",
+        variant: "destructive",
+      });
+      setOnboarding(false);
+    }
+  }, []);
+
+  return { status, loading, testing, onboarding, fetchStatus, testConnection, startOnboarding };
 }

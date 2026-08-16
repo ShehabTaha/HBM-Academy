@@ -17,16 +17,39 @@ export async function POST(
 
     const supabase = createAdminClient();
 
+    let sourceTable = "assignment_submissions";
+    let { data: submissionData } = await (supabase.from("assignment_submissions") as any)
+      .select("*, student:users(email)")
+      .eq("id", submissionId)
+      .single();
+
+    if (!submissionData) {
+      const practicalResult = await (supabase.from("practical_submissions") as any)
+        .select("*, lesson:lessons(section:sections(course_id)), student:users(email)")
+        .eq("id", submissionId)
+        .single();
+      submissionData = practicalResult.data;
+      sourceTable = "practical_submissions";
+    }
+
+    const updatePayload =
+      sourceTable === "practical_submissions"
+        ? {
+            status: "rejected",
+            admin_feedback: feedback,
+            reviewed_by: user.id,
+            reviewed_at: new Date().toISOString(),
+          }
+        : {
+            status: "rejected",
+            admin_feedback: feedback,
+            admin_id: user.id,
+            reviewed_at: new Date().toISOString(),
+          };
+
     // 2. Update Status
-    const { error: updateError } = await supabase
-      .from("assignment_submissions")
-      // @ts-expect-error - Expected type mismatch for status
-      .update({
-        status: "rejected",
-        admin_feedback: feedback,
-        admin_id: user.id,
-        reviewed_at: new Date().toISOString(),
-      })
+    const { error: updateError } = await (supabase.from(sourceTable) as any)
+      .update(updatePayload)
       .eq("id", submissionId);
 
     if (updateError) {
@@ -36,12 +59,6 @@ export async function POST(
     // 3. Ensure Progress is Incomplete (optional, but good for consistency)
     // We fetch details to finding enrollment
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: submissionData } = await (supabase.from("assignment_submissions") as any)
-      .select("*, student:users(email)")
-      .eq("id", submissionId)
-      .single();
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const submission = submissionData as any;
 
     if (submission) {
@@ -49,7 +66,7 @@ export async function POST(
         .from("enrollments")
         .select("id")
         .eq("student_id", submission.student_id)
-        .eq("course_id", submission.course_id)
+        .eq("course_id", submission.course_id || submission.lesson?.section?.course_id)
         .single();
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,7 +78,7 @@ export async function POST(
           // @ts-expect-error - Expected type mismatch for status
           .update({ is_completed: false })
           .eq("enrollment_id", enrollment.id)
-          .eq("lesson_id", submission.assignment_id);
+          .eq("lesson_id", submission.assignment_id || submission.lesson_id);
       }
     }
 

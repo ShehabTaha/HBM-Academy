@@ -35,6 +35,8 @@ export async function GET() {
     const hasKeys = !!(secretKey && publishableKey);
     const isLiveMode = secretKey?.startsWith("sk_live_") ?? false;
 
+    const connect = hasKeys ? await stripeService.getConnectStatus() : undefined;
+
     if (!hasKeys) {
       return NextResponse.json({
         connected: false,
@@ -42,6 +44,15 @@ export async function GET() {
         test_mode: true,
         has_webhook: false,
         account: null,
+        connect: {
+          account_id: null,
+          connected: false,
+          charges_enabled: false,
+          payouts_enabled: false,
+          details_submitted: false,
+          status: "not_started",
+          requirements_due: [],
+        },
         message: "Stripe keys not configured",
       });
     }
@@ -55,6 +66,7 @@ export async function GET() {
       test_mode: !isLiveMode,
       has_webhook: !!webhookSecret,
       account: test.success ? { type: isLiveMode ? "live" : "test" } : null,
+      connect,
       error: test.error ?? null,
     });
   } catch (err: unknown) {

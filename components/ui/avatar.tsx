@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { resolveAvatarUrl } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
 
 const Avatar = React.forwardRef<
@@ -21,13 +22,31 @@ Avatar.displayName = "Avatar";
 const AvatarImage = React.forwardRef<
   HTMLImageElement,
   React.ImgHTMLAttributes<HTMLImageElement>
->(({ className, ...props }, ref) => (
-  <img
-    ref={ref}
-    className={cn("aspect-square h-full w-full", className)}
-    {...props}
-  />
-));
+>(({ className, src, onError, ...props }, ref) => {
+  const initialSrc = typeof src === "string" ? src : undefined;
+  const [resolvedSrc, setResolvedSrc] = React.useState(resolveAvatarUrl(initialSrc));
+
+  React.useEffect(() => {
+    setResolvedSrc(resolveAvatarUrl(typeof src === "string" ? src : undefined));
+  }, [src]);
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      ref={ref}
+      className={cn("aspect-square h-full w-full object-cover", className)}
+      src={resolvedSrc}
+      alt={props.alt ?? ""}
+      onError={(event) => {
+        if (resolvedSrc !== resolveAvatarUrl(null)) {
+          setResolvedSrc(resolveAvatarUrl(null));
+        }
+        onError?.(event);
+      }}
+      {...props}
+    />
+  );
+});
 AvatarImage.displayName = "AvatarImage";
 
 const AvatarFallback = React.forwardRef<

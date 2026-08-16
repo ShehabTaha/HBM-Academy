@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { LoginForm } from "@/components/auth/LoginForm";
+import { AuthGateway } from "@/components/auth/AuthGateway";
 
 export const metadata: Metadata = {
   title: "Login | HBM Academy",
@@ -25,7 +25,6 @@ export default function LoginPage() {
                 alt="HBM Academy Logo"
                 fill
                 className="object-contain"
-                style={{ width: "auto", height: "auto" }}
               />
             </div>
             <span>HBM Academy</span>
@@ -39,7 +38,7 @@ export default function LoginPage() {
 
       <div className="mt-6">
         <Suspense fallback={<div>Loading...</div>}>
-          <LoginForm />
+          <AuthGateway />
         </Suspense>
       </div>
       <p className="px-8 text-center text-sm text-muted-foreground mt-8">

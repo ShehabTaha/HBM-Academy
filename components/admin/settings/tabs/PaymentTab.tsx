@@ -35,6 +35,7 @@ import {
   Info,
   XCircle,
   Webhook,
+  CreditCard,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -56,7 +57,7 @@ interface ValidationState {
 }
 
 export function PaymentTab({ settings, updateSetting }: PaymentTabProps) {
-  const { status, loading: statusLoading, testing, fetchStatus, testConnection } =
+  const { status, loading: statusLoading, testing, onboarding, fetchStatus, testConnection, startOnboarding } =
     useStripeConnection();
 
   const [showSecret, setShowSecret] = useState(false);
@@ -144,6 +145,88 @@ export function PaymentTab({ settings, updateSetting }: PaymentTabProps) {
           </div>
         </div>
       )}
+
+      <Card className="border-l-4 border-l-indigo-600">
+        <CardHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-indigo-600" />
+                Stripe Connect
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Connect the Stripe account that receives course revenue and instructor payout transfers.
+              </CardDescription>
+            </div>
+            {status?.connect?.status ? (
+              <Badge
+                variant={status.connect.connected ? "default" : "secondary"}
+                className="capitalize"
+              >
+                {status.connect.status.replace("_", " ")}
+              </Badge>
+            ) : null}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {status?.connect?.account_id ? (
+            <div className="grid gap-3 rounded-md border bg-muted/30 p-4 text-sm md:grid-cols-3">
+              <div>
+                <p className="text-muted-foreground">Account</p>
+                <p className="font-mono text-xs">{status.connect.account_id}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Charges</p>
+                <p className={status.connect.charges_enabled ? "text-green-700" : "text-amber-700"}>
+                  {status.connect.charges_enabled ? "Enabled" : "Pending"}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Payouts</p>
+                <p className={status.connect.payouts_enabled ? "text-green-700" : "text-amber-700"}>
+                  {status.connect.payouts_enabled ? "Enabled" : "Pending"}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-md border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
+              No connected Stripe account yet. Add valid Stripe API keys, save settings, then start onboarding.
+            </div>
+          )}
+
+          {status?.connect?.requirements_due?.length ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              Stripe needs more information:{" "}
+              <span className="font-mono text-xs">
+                {status.connect.requirements_due.slice(0, 6).join(", ")}
+              </span>
+            </div>
+          ) : null}
+        </CardContent>
+        <CardFooter className="flex flex-wrap justify-between gap-3 bg-muted/30 border-t">
+          <Button
+            size="sm"
+            onClick={startOnboarding}
+            disabled={onboarding || !status?.connected}
+          >
+            {onboarding ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <CreditCard className="w-4 h-4 mr-2" />
+            )}
+            {status?.connect?.account_id ? "Resume onboarding" : "Connect Stripe account"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={fetchStatus}
+            disabled={statusLoading}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Sync status
+          </Button>
+        </CardFooter>
+      </Card>
 
       {/* Stripe API Keys */}
       <Card className="border-l-4 border-l-blue-600">
@@ -292,7 +375,7 @@ export function PaymentTab({ settings, updateSetting }: PaymentTabProps) {
                 <code className="block bg-background px-2 py-1 rounded border font-mono text-xs select-all">
                   {webhookEndpoint}
                 </code>
-                <p>Events to listen for: <span className="font-mono">checkout.session.completed, payment_intent.succeeded, payment_intent.payment_failed</span></p>
+                <p>Events to listen for: <span className="font-mono">checkout.session.completed, payment_intent.succeeded, payment_intent.payment_failed, customer.subscription.updated, account.updated</span></p>
               </div>
             </div>
           </div>

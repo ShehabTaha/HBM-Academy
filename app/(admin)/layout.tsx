@@ -27,6 +27,7 @@ import {
   Menu,
   Video,
   ClipboardCheck,
+  Mail,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -39,6 +40,7 @@ const menuItems = [
   { name: "Video Library", icon: Video, href: "/dashboard/video-library" },
   { name: "Users", icon: Users, href: "/dashboard/users" },
   { name: "Submissions", icon: ClipboardCheck, href: "/dashboard/submissions" },
+  { name: "Messages", icon: Mail, href: "/dashboard/messages" },
   { name: "Analytics", icon: ChartPie, href: "/dashboard/analytics" },
 ];
 

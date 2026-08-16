@@ -5,6 +5,7 @@
   "description": "Admin control panel for managing the HBM Academy platform - courses, users, content, and analytics",
   "scripts": {
     "dev": "next dev",
+    "dev:webpack": "next dev --no-turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

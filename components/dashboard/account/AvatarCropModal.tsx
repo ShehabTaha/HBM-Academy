@@ -248,7 +248,8 @@ async function getCroppedBlob(
   const scaleX = image.naturalWidth / image.width;
   const scaleY = image.naturalHeight / image.height;
 
-  const outputSize = Math.min(pixelCrop.width * scaleX, pixelCrop.height * scaleY);
+  const sourceSize = Math.min(pixelCrop.width * scaleX, pixelCrop.height * scaleY);
+  const outputSize = Math.min(512, Math.round(sourceSize));
   canvas.width = outputSize;
   canvas.height = outputSize;
 
