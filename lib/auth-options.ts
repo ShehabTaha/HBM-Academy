@@ -69,10 +69,14 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
-          // C. Verify Password
-          const isValidPassword = await bcrypt.compare(password, user.password);
+          // C. Verify Password (supporting $2y$, $2a$, and $2b$ bcrypt hashes)
+          const hashToCompare = user.password.replace(/^\$2y\$/, "$2a$");
+          const isValidPassword = 
+            (await bcrypt.compare(password, hashToCompare)) || 
+            (await bcrypt.compare(password, user.password));
+
           if (!isValidPassword) {
-            console.warn("[Auth] Invalid password");
+            console.warn("[Auth] Invalid password for user:", email);
             return null;
           }
 
@@ -171,7 +175,8 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ user }) {
-      if (user.role === "admin" && !isAllowedAdminEmail(user.email)) {
+      const role = String(user?.role || "").toLowerCase();
+      if (role === "admin" && !isAllowedAdminEmail(user.email)) {
         console.warn(
           `[Auth] Sign-in denied for unauthorized admin email: ${user.email}`,
         );
