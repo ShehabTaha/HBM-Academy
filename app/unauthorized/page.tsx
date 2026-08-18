@@ -26,7 +26,7 @@ export default function UnauthorizedPage() {
         </div>
         <div className="pt-6">
           <Button asChild className="w-full">
-            <Link href="/auth/login">Back to Sign In</Link>
+            <Link href="/admin/login">Back to Admin Sign In</Link>
           </Button>
         </div>
         <div className="mt-8">

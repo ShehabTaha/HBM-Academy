@@ -7,12 +7,12 @@ export default async function UsersPage() {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
-    redirect("/auth/login");
+    redirect("/admin/login");
   }
 
   // Check Admin Role
-  if ((session.user as any).role !== "admin") {
-    redirect("/dashboard");
+  if ((session.user as { role?: string }).role !== "admin") {
+    redirect("/unauthorized");
   }
 
   return (
@@ -21,3 +21,4 @@ export default async function UsersPage() {
     </div>
   );
 }
+

@@ -1,26 +1,18 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { StudentsPageContent } from "@/components/admin/users/StudentsPageContent";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 
 export default async function StudentsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getServerSession(authOptions);
 
-  if (!user) {
-    redirect("/auth/signin"); // Adjust login path
+  if (!session || !session.user) {
+    redirect("/admin/login");
   }
 
   // Check Admin Role
-  const { data: adminProfile } = await supabase
-    .from("users")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (!adminProfile || (adminProfile as { role: string }).role !== "admin") {
-    redirect("/dashboard"); // Redirect non-admins
+  if ((session.user as { role?: string }).role !== "admin") {
+    redirect("/unauthorized");
   }
 
   return (
@@ -29,3 +21,4 @@ export default async function StudentsPage() {
     </div>
   );
 }
+

@@ -9,7 +9,14 @@ import { SignInButton } from "@/components/auth/SignInButton";
 import { ErrorDisplay } from "@/components/auth/ErrorDisplay";
 
 function getSafeAdminDestination(callbackUrl: string | null) {
-  if (callbackUrl?.startsWith("/dashboard/")) return callbackUrl;
+  if (
+    callbackUrl &&
+    callbackUrl.startsWith("/dashboard/") &&
+    !callbackUrl.includes("//") &&
+    !callbackUrl.includes(":")
+  ) {
+    return callbackUrl;
+  }
   return "/dashboard/home";
 }
 

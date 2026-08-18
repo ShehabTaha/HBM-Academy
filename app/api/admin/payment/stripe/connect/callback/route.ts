@@ -8,8 +8,8 @@ export async function GET(request: Request) {
   try {
     const { error: authError } = await requireAdmin();
     if (authError) {
-      url.pathname = "/auth/login";
-      url.search = "?redirect=/dashboard/settings";
+      url.pathname = "/admin/login";
+      url.search = "?callbackUrl=/dashboard/settings";
       return NextResponse.redirect(url);
     }
 

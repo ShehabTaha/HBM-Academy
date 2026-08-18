@@ -102,7 +102,7 @@ function AppSidebar() {
       console.error("Failed to revoke session on logout", e);
     }
     await signOut({ redirect: false });
-    router.push("/auth/login");
+    router.push("/admin/login");
   };
 
   return (

@@ -20,13 +20,13 @@ export default async function AnalyticsPage() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    redirect("/auth/signin");
+    redirect("/admin/login");
   }
 
   // Ensure admin access
   const user = session.user as CustomUser;
   if (user.role !== "admin") {
-    redirect("/dashboard");
+    redirect("/unauthorized");
   }
 
   return (
@@ -35,3 +35,4 @@ export default async function AnalyticsPage() {
     </div>
   );
 }
+
