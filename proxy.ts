@@ -59,15 +59,33 @@ export default async function middleware(req: NextRequest) {
     return response;
   }
 
-  // ── 2. Evaluate NextAuth Admin JWT ───────────────────────────────────────
-  const adminToken = await getToken({
+  // ── 2. Evaluate NextAuth Admin JWT with robust cookie & secret handling ────
+  const secret =
+    process.env.NEXTAUTH_SECRET ||
+    "your-secret-key-here-change-in-production";
+
+  const isHttps =
+    req.url.startsWith("https://") ||
+    req.headers.get("x-forwarded-proto") === "https" ||
+    process.env.NODE_ENV === "production";
+
+  let adminToken = await getToken({
     req,
-    secret: process.env.NEXTAUTH_SECRET,
+    secret,
+    secureCookie: isHttps,
   });
+
+  if (!adminToken) {
+    adminToken = await getToken({
+      req,
+      secret,
+      secureCookie: !isHttps,
+    });
+  }
 
   const isValidAdmin =
     Boolean(adminToken) &&
-    adminToken?.role === "admin" &&
+    String(adminToken?.role || "").toLowerCase() === "admin" &&
     isAllowedAdminEmail(adminToken?.email as string);
 
   // ── 3. Direct /admin or /admin/dashboard navigation ──────────────────────

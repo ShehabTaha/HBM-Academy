@@ -64,8 +64,8 @@ export function AdminLoginForm() {
       return;
     }
 
-    router.push(getSafeAdminDestination(searchParams.get("callbackUrl")));
-    router.refresh();
+    const targetUrl = getSafeAdminDestination(searchParams.get("callbackUrl"));
+    window.location.href = targetUrl;
   }
 
   return (
